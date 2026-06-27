@@ -1,68 +1,84 @@
 module Main exposing (main)
 
-{-| The elm-svg showcase — a single page of live charts drawn by the library.
+{-| The elm-svg site — a **workspace of your own charts**, drawn by the library.
 
-A `Browser.element` app renders a gallery of `Chart.*` calls over sample data (bar, line,
-scatter, multi-series), each with the one line of code that produced it and a short note. A
-control at the top scales every chart at once, to show the charts are resolution-independent
-(they are drawn with a `viewBox`).
+This module is a thin host: it wires the reusable [`Workspace`](Workspace) component to a browser
+(localStorage) backend and a local user, and hands it the chart-document configuration from
+[`ChartDoc`](ChartDoc). You get many-chart management, naming, search, copy, sharing/permissions,
+comments and CSV / JSON export for free; the chart editor (a kind selector, a data box and a live
+preview) is drawn with the library's own [`Chart`](Chart) module.
+
+It is the same `Workspace` component that powers elm-notebook — over a completely different
+document — which is the point: the workspace is reusable.
 
 -}
 
 import Browser
-import Chart
-import Html exposing (Html, a, button, code, div, footer, h1, h2, header, p, pre, section, span, text)
+import ChartDoc exposing (ChartDoc, ChartMsg)
+import Html exposing (Html, a, div, footer, h1, header, p, span, text)
 import Html.Attributes as HA
-import Html.Events as HE
+import Workspace
+import Workspace.Backend exposing (Backend, Context)
+import Workspace.Browser
 
 
 main : Program () Model Msg
 main =
     Browser.element
-        { init = \_ -> ( { size = 380 }, Cmd.none )
-        , update = \msg model -> ( update msg model, Cmd.none )
+        { init = init
+        , update = update
         , view = view
-        , subscriptions = always Sub.none
+        , subscriptions = subscriptions
         }
 
 
+
+-- WIRING ---------------------------------------------------------------------
+
+
+ctx : Context
+ctx =
+    { user = "me", groups = [] }
+
+
+backend : Backend (Workspace.Msg ChartMsg)
+backend =
+    Workspace.Browser.backend "elm-svg"
+
+
+
+-- MODEL ----------------------------------------------------------------------
+
+
 type alias Model =
-    { size : Float }
+    { ws : Workspace.Model ChartDoc }
 
 
 type Msg
-    = SetSize Float
+    = WsMsg (Workspace.Msg ChartMsg)
 
 
-update : Msg -> Model -> Model
-update (SetSize s) model =
-    { model | size = s }
+init : () -> ( Model, Cmd Msg )
+init _ =
+    let
+        ( ws, cmd ) =
+            Workspace.init backend
+    in
+    ( { ws = ws }, Cmd.map WsMsg cmd )
 
 
-
--- DATA -----------------------------------------------------------------------
-
-
-sales : List ( String, Float )
-sales =
-    [ ( "Jan", 120 ), ( "Feb", 98 ), ( "Mar", 145 ), ( "Apr", 132 ), ( "May", 168 ), ( "Jun", 180 ) ]
-
-
-temps : List ( String, Float )
-temps =
-    [ ( "Mon", -3 ), ( "Tue", 1 ), ( "Wed", 4 ), ( "Thu", 2 ), ( "Fri", 7 ), ( "Sat", 9 ), ( "Sun", 5 ) ]
+update : Msg -> Model -> ( Model, Cmd Msg )
+update (WsMsg m) model =
+    let
+        ( ws, cmd ) =
+            Workspace.update ChartDoc.config backend ctx m model.ws
+    in
+    ( { ws = ws }, Cmd.map WsMsg cmd )
 
 
-cloud : List ( Float, Float )
-cloud =
-    [ ( 1, 2 ), ( 2, 3.2 ), ( 3, 2.8 ), ( 4, 5 ), ( 5, 4.4 ), ( 6, 6.1 ), ( 7, 5.5 ), ( 8, 7.8 ), ( 9, 7.2 ), ( 10, 9 ) ]
-
-
-waves : List ( String, List ( Float, Float ) )
-waves =
-    [ ( "a", List.map (\i -> ( toFloat i, sin (toFloat i / 3) * 4 + 5 )) (List.range 0 24) )
-    , ( "b", List.map (\i -> ( toFloat i, cos (toFloat i / 3) * 3 + 5 )) (List.range 0 24) )
-    ]
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.map WsMsg (Workspace.subscriptions model.ws)
 
 
 
@@ -71,72 +87,23 @@ waves =
 
 view : Model -> Html Msg
 view model =
-    let
-        cfg =
-            Chart.sized model.size (model.size * 0.55)
-    in
     div [ HA.class "es-app" ]
         [ header [ HA.class "es-hero" ]
             [ h1 [] [ text "elm-svg" ]
             , p [ HA.class "es-lead" ]
-                [ text "A small, dependency-free SVG charting library in Elm — "
-                , code [] [ text "Chart.bars" ]
-                , text ", "
-                , code [] [ text "Chart.line" ]
-                , text ", "
-                , code [] [ text "Chart.scatter" ]
-                , text " and "
-                , code [] [ text "Chart.multiLine" ]
-                , text ", with the scale maths in a separately-tested "
-                , code [] [ text "Scale" ]
-                , text " module."
-                ]
-            , div [ HA.class "es-sizer" ]
-                [ span [] [ text "Scale all charts:" ]
-                , sizeButton model 300 "S"
-                , sizeButton model 380 "M"
-                , sizeButton model 460 "L"
+                [ text "Create and manage your own charts — bar, line and scatter — drawn by the "
+                , a [ HA.href "https://github.com/tunguski/elm-svg" ] [ text "elm-svg" ]
+                , text " library, in a workspace built on "
+                , a [ HA.href "https://github.com/tunguski/elm-workspace" ] [ text "elm-workspace" ]
+                , text ". Charts are saved in your browser; share, comment and export them."
                 ]
             ]
-        , section [ HA.class "es-grid" ]
-            [ card "Bar chart" "Chart.bars cfg sales" "Categorical values; a zero baseline is always shown." (Chart.bars cfg sales)
-            , card "Line chart" "Chart.line cfg temps" "A value per category, with markers. Negative values dip below the baseline." (Chart.line cfg temps)
-            , card "Scatter plot" "Chart.scatter cfg cloud" "Raw (x, y) points, each axis scaled to its own data." (Chart.scatter cfg cloud)
-            , card "Multi-series" "Chart.multiLine cfg waves" "Several named series, each in a palette colour." (Chart.multiLine cfg waves)
-            ]
+        , Html.map WsMsg (Workspace.view ChartDoc.config backend ctx model.ws)
         , footer [ HA.class "es-foot" ]
-            [ text "elm-svg — part of the "
-            , a [ HA.href "https://github.com/tunguski/elm-lang" ] [ text "elm-lang" ]
-            , text " ecosystem · "
-            , a [ HA.href "tests.html" ] [ text "test report" ]
+            [ a [ HA.href "tests.html" ] [ text "Test report" ]
             , text " · "
-            , a [ HA.href "https://tunguski.github.io/" ] [ text "more projects" ]
+            , a [ HA.href "https://github.com/tunguski/elm-svg" ] [ text "GitHub" ]
+            , text " · "
+            , a [ HA.href "https://tunguski.github.io/" ] [ text "More projects" ]
             ]
-        ]
-
-
-sizeButton : Model -> Float -> String -> Html Msg
-sizeButton model s label =
-    button
-        [ HA.class
-            ("es-size"
-                ++ (if model.size == s then
-                        " es-size-on"
-
-                    else
-                        ""
-                   )
-            )
-        , HE.onClick (SetSize s)
-        ]
-        [ text label ]
-
-
-card : String -> String -> String -> Html Msg -> Html Msg
-card title snippet note chart =
-    div [ HA.class "es-card" ]
-        [ h2 [] [ text title ]
-        , div [ HA.class "es-chart-box" ] [ chart ]
-        , pre [ HA.class "es-code" ] [ code [] [ text snippet ] ]
-        , p [ HA.class "es-note" ] [ text note ]
         ]

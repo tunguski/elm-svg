@@ -3,7 +3,11 @@
 A small, **dependency-free SVG charting library** in Elm, for the
 [elm-lang](https://github.com/tunguski/elm-lang) compiler.
 
-Live demo: **https://tunguski.github.io/elm-svg/**
+Live site: **https://tunguski.github.io/elm-svg/** — a small **workspace** where you create and
+manage your own charts (saved in your browser): name / open / search / copy / delete them, set
+sharing & permissions, comment, and export their data to CSV / JSON. That whole experience comes
+from the reusable [elm-workspace](https://github.com/tunguski/elm-workspace) library (vendored under
+`vendor/`); the chart **document** and its live editor are this repo, drawn with `Chart` below.
 
 One call gives you a chart:
 
