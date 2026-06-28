@@ -33,8 +33,13 @@ type alias ChartDoc =
 
 type ChartKind
     = Bar
+    | HBar
     | Line
+    | Area
     | Scatter
+    | Pie
+    | Donut
+    | Histogram
 
 
 {-| Editor messages: change the chart kind, or edit the data. -}
@@ -94,21 +99,51 @@ kindToString kind =
         Bar ->
             "bar"
 
+        HBar ->
+            "hbar"
+
         Line ->
             "line"
 
+        Area ->
+            "area"
+
         Scatter ->
             "scatter"
+
+        Pie ->
+            "pie"
+
+        Donut ->
+            "donut"
+
+        Histogram ->
+            "histogram"
 
 
 kindFromString : String -> ChartKind
 kindFromString s =
     case s of
+        "hbar" ->
+            HBar
+
         "line" ->
             Line
 
+        "area" ->
+            Area
+
         "scatter" ->
             Scatter
+
+        "pie" ->
+            Pie
+
+        "donut" ->
+            Donut
+
+        "histogram" ->
+            Histogram
 
         _ ->
             Bar
@@ -189,8 +224,13 @@ viewDoc env doc =
             [ label [ HA.class "cd-label" ] [ text "Chart type" ]
             , Html.select [ HA.class "cd-select", HE.onInput SetKind ]
                 [ option [ HA.value "bar", HA.selected (doc.kind == Bar) ] [ text "Bar" ]
+                , option [ HA.value "hbar", HA.selected (doc.kind == HBar) ] [ text "Horizontal bar" ]
                 , option [ HA.value "line", HA.selected (doc.kind == Line) ] [ text "Line" ]
+                , option [ HA.value "area", HA.selected (doc.kind == Area) ] [ text "Area" ]
                 , option [ HA.value "scatter", HA.selected (doc.kind == Scatter) ] [ text "Scatter" ]
+                , option [ HA.value "pie", HA.selected (doc.kind == Pie) ] [ text "Pie" ]
+                , option [ HA.value "donut", HA.selected (doc.kind == Donut) ] [ text "Donut" ]
+                , option [ HA.value "histogram", HA.selected (doc.kind == Histogram) ] [ text "Histogram" ]
                 ]
             ]
         , div [ HA.class "cd-preview" ] [ chartView doc ]
@@ -219,8 +259,23 @@ chartView doc =
         Bar ->
             Chart.bars c data
 
+        HBar ->
+            Chart.hbars c data
+
         Line ->
             Chart.line c data
 
+        Area ->
+            Chart.area c data
+
         Scatter ->
             Chart.scatter c (List.indexedMap (\i ( _, v ) -> ( toFloat i, v )) data)
+
+        Pie ->
+            Chart.pie c data
+
+        Donut ->
+            Chart.donut (Chart.withInner 0.6 c) data
+
+        Histogram ->
+            Chart.histogram c (List.map Tuple.second data)

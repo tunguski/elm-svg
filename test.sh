@@ -13,4 +13,4 @@ cd "$(dirname "$0")"
 ELM="${ELM:-elm}"
 P="$(pwd)"
 
-$ELM test "$P/test/SvgTest.elm" "$P/src/Scale.elm"
+$ELM test "$P/test/SvgTest.elm" "$P/src/Scale.elm" "$P/src/Arc.elm" "$P/src/Curve.elm"

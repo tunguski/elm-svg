@@ -5,6 +5,8 @@ module — domain↔range mapping, nice bounds, ticks and coordinate formatting 
 checked here, headlessly and exactly.
 -}
 
+import Arc
+import Curve
 import Expect
 import Scale
 import Test exposing (Test, describe, test)
@@ -17,6 +19,12 @@ suite =
         , invertTests
         , boundsTests
         , tickTests
+        , logTests
+        , niceTests
+        , arcTests
+        , binTests
+        , colorTests
+        , curveTests
         , formatTests
         ]
 
@@ -81,6 +89,148 @@ tickTests =
             \_ -> Expect.equal (List.map round (Scale.ticks 4 ( 0, 100 ))) [ 0, 25, 50, 75, 100 ]
         , test "spans the whole interval" <|
             \_ -> Expect.equal (List.map round (Scale.ticks 5 ( 10, 20 )) |> List.head) (Just 10)
+        ]
+
+
+logTests : Test
+logTests =
+    describe "Scale.log"
+        [ test "maps the low decade to the range start" <|
+            \_ -> within 0.001 0 (Scale.convert (Scale.log ( 1, 1000 ) ( 0, 300 )) 1)
+        , test "maps the high decade to the range end" <|
+            \_ -> within 0.001 300 (Scale.convert (Scale.log ( 1, 1000 ) ( 0, 300 )) 1000)
+        , test "puts each decade an equal pixel step apart" <|
+            \_ -> within 0.001 100 (Scale.convert (Scale.log ( 1, 1000 ) ( 0, 300 )) 10)
+        , test "round-trips through invert" <|
+            \_ ->
+                let
+                    s =
+                        Scale.log ( 1, 1000 ) ( 0, 300 )
+                in
+                within 0.001 50 (Scale.invert s (Scale.convert s 50))
+        , test "clamps a non-positive low bound" <|
+            \_ -> within 0.001 0 (Scale.convert (Scale.log ( 0, 100 ) ( 0, 200 )) 1.0e-9)
+        ]
+
+
+niceTests : Test
+niceTests =
+    describe "Scale.niceTicks"
+        [ test "rounds a step to the 1·2·5 series" <|
+            \_ -> Expect.equal (Scale.niceNum True 1.2) 1
+        , test "rounds an awkward step up to 5" <|
+            \_ -> Expect.equal (Scale.niceNum True 4.5) 5
+        , test "covers the interval with round endpoints" <|
+            \_ -> Expect.equal (List.map round (Scale.niceTicks 5 ( 0, 97 ))) [ 0, 20, 40, 60, 80, 100 ]
+        , test "snaps the low bound outward" <|
+            \_ -> Expect.equal (roundPair (Scale.niceBoundsRounded 5 ( 3, 97 ))) ( 0, 100 )
+        , test "spans negatives outward too" <|
+            \_ -> Expect.equal (roundPair (Scale.niceBoundsRounded 5 ( -12, 8 ))) ( -15, 10 )
+        ]
+
+
+roundPair : ( Float, Float ) -> ( Int, Int )
+roundPair ( a, b ) =
+    ( round a, round b )
+
+
+arcTests : Test
+arcTests =
+    describe "Arc"
+        [ test "angle 0 is twelve o'clock (straight up)" <|
+            \_ ->
+                let
+                    ( x, y ) =
+                        Arc.pointOnCircle ( 0, 0 ) 10 0
+                in
+                Expect.equal ( round x, round y ) ( 0, -10 )
+        , test "a quarter turn goes clockwise to the right" <|
+            \_ ->
+                let
+                    ( x, y ) =
+                        Arc.pointOnCircle ( 0, 0 ) 10 (pi / 2)
+                in
+                Expect.equal ( round x, round y ) ( 10, 0 )
+        , test "slices split the whole circle by value" <|
+            \_ ->
+                Expect.equal
+                    (List.map (\s -> round (s.fraction * 100)) (Arc.slices [ 1, 1, 2 ]))
+                    [ 25, 25, 50 ]
+        , test "slices run from 0 to a full turn" <|
+            \_ ->
+                let
+                    last =
+                        List.head (List.reverse (Arc.slices [ 3, 5, 2 ]))
+                in
+                within 0.001 Arc.tau (Maybe.withDefault 0 (Maybe.map .end last))
+        , test "an all-zero input falls back to equal slices" <|
+            \_ ->
+                Expect.equal
+                    (List.map (\s -> round (s.fraction * 100)) (Arc.slices [ 0, 0 ]))
+                    [ 50, 50 ]
+        ]
+
+
+binTests : Test
+binTests =
+    describe "Scale.binCounts"
+        [ test "counts values into equal-width bins" <|
+            \_ -> Expect.equal (Tuple.second (Scale.binCounts 2 [ 0, 1, 2, 3, 4 ])) [ 2, 3 ]
+        , test "the maximum lands in the last bin" <|
+            \_ -> Expect.equal (Tuple.second (Scale.binCounts 4 [ 0, 10 ])) [ 1, 0, 0, 1 ]
+        , test "reports the range it binned over" <|
+            \_ -> Expect.equal (Tuple.first (Scale.binCounts 3 [ 2, 5, 8 ])) ( 2, 8 )
+        , test "an empty input is all zeros over (0,1)" <|
+            \_ -> Expect.equal (Scale.binCounts 2 []) ( ( 0, 1 ), [ 0, 0 ] )
+        ]
+
+
+colorTests : Test
+colorTests =
+    describe "Scale.interpolateColor"
+        [ test "t = 0 is the first colour" <|
+            \_ -> Expect.equal (Scale.interpolateColor "#000000" "#ffffff" 0) "#000000"
+        , test "t = 1 is the second colour" <|
+            \_ -> Expect.equal (Scale.interpolateColor "#000000" "#ffffff" 1) "#ffffff"
+        , test "the midpoint is a half mix" <|
+            \_ -> Expect.equal (Scale.interpolateColor "#000000" "#ffffff" 0.5) "#808080"
+        , test "mixes channels independently" <|
+            \_ -> Expect.equal (Scale.interpolateColor "#ff0000" "#0000ff" 0.5) "#800080"
+        , test "clamps t past the ends" <|
+            \_ -> Expect.equal (Scale.interpolateColor "#102030" "#405060" 2) "#405060"
+        ]
+
+
+curveTests : Test
+curveTests =
+    describe "Curve.smooth"
+        [ test "starts at the first point and ends at the last" <|
+            \_ ->
+                let
+                    out =
+                        Curve.catmullRom 4 [ ( 0, 0 ), ( 1, 2 ), ( 2, 1 ), ( 3, 3 ) ]
+
+                    ends =
+                        ( Maybe.map roundPair (List.head out)
+                        , Maybe.map roundPair (List.head (List.reverse out))
+                        )
+                in
+                Expect.equal ends ( Just ( 0, 0 ), Just ( 3, 3 ) )
+        , test "expands the point count by roughly samples per segment" <|
+            \_ ->
+                -- 4 points → 3 segments × 5 samples + final point = 16
+                Expect.equal (List.length (Curve.catmullRom 5 [ ( 0, 0 ), ( 1, 2 ), ( 2, 1 ), ( 3, 3 ) ])) 16
+        , test "keeps a straight line straight on an interior segment" <|
+            \_ ->
+                let
+                    -- segment 1 (points 1→2) has symmetric collinear neighbours, so its
+                    -- half-way sample (output index 3) must sit exactly on the line at x = 1.5.
+                    out =
+                        Curve.catmullRom 2 [ ( 0, 0 ), ( 1, 1 ), ( 2, 2 ), ( 3, 3 ), ( 4, 4 ) ]
+                in
+                within 0.001 1.5 (Maybe.withDefault -99 (List.head (List.drop 3 out) |> Maybe.map Tuple.first))
+        , test "leaves fewer than three points untouched" <|
+            \_ -> Expect.equal (Curve.smooth [ ( 0, 0 ), ( 1, 1 ) ]) [ ( 0, 0 ), ( 1, 1 ) ]
         ]
 
 
