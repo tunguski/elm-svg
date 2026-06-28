@@ -2,14 +2,16 @@ module Main exposing (main)
 
 {-| The elm-svg site.
 
-Two views, switched by a top nav and reflected in the URL hash so a page is safe to reload and
-links are shareable:
+Two views, reflected in the URL hash so a page is safe to reload, links are shareable, and the
+browser Back/Forward buttons work:
 
-  - **Examples** (`#`) — the original showcase gallery of live charts drawn by the library
-    (see [`Examples`](Examples)).
-  - **Workspace** (`#workspace`, and `#doc/<uuid>` per chart) — create and manage your own charts,
+  - **Examples** (`#`) — the original showcase gallery of live charts (see [`Examples`](Examples)).
+  - **Workspace** (`#workspace`, and `#<uuid>` per chart) — create and manage your own charts,
     saved in the browser, via the reusable [`Workspace`](Workspace) component over the
     [`ChartDoc`](ChartDoc) document.
+
+The view is polled from the URL hash (rather than `Browser.application`, which would intercept the
+data-URI export download links).
 
 -}
 
@@ -20,6 +22,7 @@ import Examples
 import Html exposing (Html, a, button, div, footer, h1, header, nav, p, span, text)
 import Html.Attributes as HA
 import Html.Events as HE
+import Time
 import Workspace
 import Workspace.Backend exposing (Backend, Context)
 import Workspace.Browser
@@ -62,6 +65,7 @@ type alias Model =
     { route : Route
     , ws : Workspace.Model ChartDoc
     , size : Float
+    , hash : String
     }
 
 
@@ -70,6 +74,7 @@ type Msg
     | SetRoute Route
     | SetSize Float
     | GotHash String
+    | Poll
 
 
 init : () -> ( Model, Cmd Msg )
@@ -78,7 +83,7 @@ init _ =
         ( ws, wsCmd ) =
             Workspace.init backend
     in
-    ( { route = ExamplesRoute, ws = ws, size = 380 }
+    ( { route = ExamplesRoute, ws = ws, size = 380, hash = "" }
     , Cmd.batch [ Cmd.map WsMsg wsCmd, Nav.getHash GotHash ]
     )
 
@@ -91,14 +96,32 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotHash raw ->
-            applyHash raw model
+            let
+                h =
+                    normalizeHash raw
+            in
+            if h == model.hash then
+                ( model, Cmd.none )
+
+            else
+                applyHash h { model | hash = h }
+
+        Poll ->
+            ( model, Nav.getHash GotHash )
 
         _ ->
             let
                 ( next, cmd ) =
                     updateInner msg model
+
+                desired =
+                    toHash next
             in
-            ( next, Cmd.batch [ cmd, syncHash model next ] )
+            if desired == next.hash then
+                ( next, cmd )
+
+            else
+                ( { next | hash = desired }, Cmd.batch [ cmd, Nav.setHash desired ] )
 
 
 updateInner : Msg -> Model -> ( Model, Cmd Msg )
@@ -117,13 +140,16 @@ updateInner msg model =
         SetSize s ->
             ( { model | size = s }, Cmd.none )
 
-        GotHash _ ->
+        _ ->
             ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.map WsMsg (Workspace.subscriptions model.ws)
+    Sub.batch
+        [ Sub.map WsMsg (Workspace.subscriptions model.ws)
+        , Time.every 400 (always Poll)
+        ]
 
 
 
@@ -145,21 +171,8 @@ toHash model =
                     "workspace"
 
 
-syncHash : Model -> Model -> Cmd Msg
-syncHash old next =
-    if toHash old == toHash next then
-        Cmd.none
-
-    else
-        Nav.setHash (toHash next)
-
-
 applyHash : String -> Model -> ( Model, Cmd Msg )
-applyHash raw model =
-    let
-        h =
-            normalizeHash raw
-    in
+applyHash h model =
     if h == "" then
         ( { model | route = ExamplesRoute }, Cmd.none )
 
@@ -167,7 +180,6 @@ applyHash raw model =
         ( { model | route = Wsp }, Cmd.none )
 
     else
-        -- any other hash is a document id (a uuid)
         ( { model | route = Wsp }
         , Cmd.map WsMsg (Workspace.openDocument backend h)
         )
@@ -239,13 +251,16 @@ tab label active msg =
 hero : Html Msg
 hero =
     header [ HA.class "es-hero" ]
-        [ h1 [] [ text "elm-svg" ]
-        , p [ HA.class "es-lead" ]
-            [ text "A small, dependency-free SVG charting library in Elm — bar, line, scatter and "
-            , text "multi-series charts over plain data, with the scale maths in a separately-tested "
-            , text "module. Open the "
-            , button [ HA.class "es-inline-link", HE.onClick (SetRoute Wsp) ] [ text "Workspace" ]
-            , text " to create and save your own charts."
+        [ div [ HA.class "es-hero-inner" ]
+            [ span [ HA.class "es-eyebrow" ] [ text "elm · svg charts" ]
+            , h1 [] [ text "elm-svg" ]
+            , p [ HA.class "es-lead" ]
+                [ text "A small, dependency-free SVG charting library in Elm — bar, line, scatter and "
+                , text "multi-series charts over plain data, with the scale maths in a separately-tested "
+                , text "module. Open the "
+                , button [ HA.class "es-inline-link", HE.onClick (SetRoute Wsp) ] [ text "Workspace" ]
+                , text " to create and save your own charts."
+                ]
             ]
         ]
 

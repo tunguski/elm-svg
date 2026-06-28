@@ -180,7 +180,8 @@ viewDoc : Workspace.EditorEnv -> ChartDoc -> Html ChartMsg
 viewDoc env doc =
     div [ HA.class "cd" ]
         [ if env.commentsVisible && env.commentCount "chart" > 0 then
-            span [ HA.class "cd-marker" ] [ text ("💬 " ++ String.fromInt (env.commentCount "chart")) ]
+            span [ HA.class "cd-marker" ]
+                [ Html.i [ HA.class "bi bi-chat-dots" ] [], text (" " ++ String.fromInt (env.commentCount "chart")) ]
 
           else
             text ""

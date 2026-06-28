@@ -483,9 +483,11 @@ a:hover { text-decoration: underline; }
 
 /* es app shell + chart-doc editor */
 .es-app { max-width: 1100px; margin: 0 auto; padding: 0 20px 80px; }
-.es-hero { padding: 40px 0 18px; }
-.es-hero h1 { margin: 0 0 8px; font-size: 2rem; letter-spacing: -.02em; color: var(--ws-accent); }
-.es-lead { margin: 0; color: var(--ws-muted); max-width: 640px; }
+.es-hero { text-align: center; padding: 46px 16px 30px; background: radial-gradient(720px 300px at 50% -40%, rgba(91,110,245,.16), transparent 70%); }
+.es-hero-inner { max-width: 720px; margin: 0 auto; }
+.es-eyebrow { display: inline-block; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--ws-accent); border: 1px solid var(--ws-border); background: var(--ws-panel); border-radius: 999px; padding: .3rem .8rem; margin-bottom: 1rem; }
+.es-hero h1 { margin: 0 0 .5rem; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -.02em; color: var(--ws-ink); }
+.es-lead { margin: 0 auto; max-width: 600px; color: var(--ws-muted); font-size: 1.05rem; }
 .es-foot { margin-top: 40px; text-align: center; color: var(--ws-muted); font-size: 13px; }
 .es-foot a, .es-lead a { color: var(--ws-accent); text-decoration: none; }
 .cd { display: flex; flex-direction: column; gap: 12px; }
