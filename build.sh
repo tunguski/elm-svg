@@ -22,12 +22,18 @@ $ELM make "$P/src/Main.elm" --project="$P/elm.json" -o "$P/$OUT/elm-svg.html" --
 # The compiler owns the output's <head>; add a viewport meta and inline src/svg.css as a <style>
 # so the page stays a single self-contained file (idempotent on re-runs).
 HTML="$P/$OUT/elm-svg.html"
-CSSFILE="$P/src/svg.css" perl -0pi -e '
+TITLE="elm-svg" SITECSS="$P/assets/site.css" CSSFILE="$P/src/svg.css" perl -0pi -e '
   if (index($_, q{name="viewport"}) < 0) {
     s#<meta charset="utf-8">#<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">#;
   }
+  s#<title>.*?</title>#"<title>".$ENV{TITLE}."</title>"#e;
   if (index($_, q{bootstrap-icons}) < 0) {
     s#</head>#<link rel="stylesheet" href="bootstrap-icons-1.11.3.css"></head>#;
+  }
+  if (index($_, q{id="wsite-css"}) < 0) {
+    open(my $f, "<", $ENV{SITECSS}) or die "no site.css: $!";
+    local $/; my $css = <$f>; close($f);
+    s#</head>#"<style id=\"wsite-css\">".$css."</style></head>"#e;
   }
   if (index($_, q{id="es-app-css"}) < 0) {
     open(my $f, "<", $ENV{CSSFILE}) or die "no svg.css: $!";
