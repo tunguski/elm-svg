@@ -496,3 +496,12 @@ a:hover { text-decoration: underline; }
 .cd-preview { background: #fff; border: 1px solid var(--ws-border); border-radius: 10px; padding: 12px; display: flex; justify-content: center; }
 .cd-data { width: 100%; border: 1px solid var(--ws-border); border-radius: 10px; padding: 12px; font: 13px/1.6 ui-monospace, Menlo, Consolas, monospace; resize: vertical; }
 .cd-data:focus, .cd-select:focus { outline: none; border-color: var(--ws-accent); }
+
+/* top nav (Examples / Workspace) */
+.es-topnav { display: flex; align-items: center; justify-content: space-between; max-width: 1100px; margin: 0 auto; padding: 14px 20px 0; }
+.es-brand { font-weight: 800; color: var(--ws-accent, #5b6ef5); letter-spacing: -.01em; }
+.es-topnav-tabs { display: flex; gap: 6px; }
+.es-tab { appearance: none; border: 1px solid var(--ws-border, #e2e8f2); background: #fff; border-radius: 999px; padding: 6px 16px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ws-muted, #61708a); }
+.es-tab-active { background: var(--ws-accent, #5b6ef5); border-color: var(--ws-accent, #5b6ef5); color: #fff; }
+.es-inline-link { appearance: none; border: none; background: none; padding: 0; color: var(--ws-accent, #5b6ef5); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
+.es-examples { max-width: 1100px; margin: 0 auto; }
