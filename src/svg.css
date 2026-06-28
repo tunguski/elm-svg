@@ -507,3 +507,10 @@ a:hover { text-decoration: underline; }
 .es-tab-active { background: var(--ws-accent, #5b6ef5); border-color: var(--ws-accent, #5b6ef5); color: #fff; }
 .es-inline-link { appearance: none; border: none; background: none; padding: 0; color: var(--ws-accent, #5b6ef5); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
 .es-examples { max-width: 1100px; margin: 0 auto; }
+
+/* workspace-view top navbar (logo + name) */
+.es-wsnav { display: flex; align-items: center; padding: 14px 0 6px; }
+.es-brand { display: inline-flex; align-items: center; gap: 10px; background: none; border: none; cursor: pointer; padding: 6px; border-radius: 10px; }
+.es-brand:hover { background: rgba(91, 110, 245, 0.08); }
+.es-logo { width: 30px; height: 30px; display: block; }
+.es-brand-name { font-weight: 800; font-size: 1.1rem; color: var(--ws-ink, #1f2733); letter-spacing: -0.01em; }

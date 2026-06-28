@@ -19,7 +19,7 @@ import Browser
 import Browser.Navigation as Nav
 import ChartDoc exposing (ChartDoc, ChartMsg)
 import Examples
-import Html exposing (Html, a, button, div, footer, h1, header, nav, p, span, text)
+import Html exposing (Html, a, button, div, footer, h1, header, img, nav, p, span, text)
 import Html.Attributes as HA
 import Html.Events as HE
 import Time
@@ -96,15 +96,19 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotHash raw ->
-            let
-                h =
-                    normalizeHash raw
-            in
-            if h == model.hash then
+            if pendingCreate model then
                 ( model, Cmd.none )
 
             else
-                applyHash h { model | hash = h }
+                let
+                    h =
+                        normalizeHash raw
+                in
+                if h == toHash model then
+                    ( { model | hash = h }, Cmd.none )
+
+                else
+                    applyHash h { model | hash = h }
 
         Poll ->
             ( model, Nav.getHash GotHash )
@@ -117,11 +121,21 @@ update msg model =
                 desired =
                     toHash next
             in
-            if desired == next.hash then
+            if pendingCreate next || desired == next.hash then
                 ( next, cmd )
 
             else
                 ( { next | hash = desired }, Cmd.batch [ cmd, Nav.setHash desired ] )
+
+
+pendingCreate : Model -> Bool
+pendingCreate model =
+    case model.ws.pending of
+        Just _ ->
+            True
+
+        Nothing ->
+            False
 
 
 updateInner : Msg -> Model -> ( Model, Cmd Msg )
@@ -206,8 +220,7 @@ dropPrefixChar c s =
 view : Model -> Html Msg
 view model =
     div [ HA.class "es-app" ]
-        [ topNav model.route
-        , case model.route of
+        [ case model.route of
             ExamplesRoute ->
                 div []
                     [ hero
@@ -215,37 +228,22 @@ view model =
                     ]
 
             Wsp ->
-                Html.map WsMsg (Workspace.view ChartDoc.config backend ctx model.ws)
+                div []
+                    [ wsNav
+                    , Html.map WsMsg (Workspace.view ChartDoc.config backend ctx model.ws)
+                    ]
         , pageFooter
         ]
 
 
-topNav : Route -> Html Msg
-topNav route =
-    nav [ HA.class "es-topnav" ]
-        [ span [ HA.class "es-brand" ] [ text "elm-svg" ]
-        , div [ HA.class "es-topnav-tabs" ]
-            [ tab "Examples" (route == ExamplesRoute) (SetRoute ExamplesRoute)
-            , tab "Workspace" (route == Wsp) (SetRoute Wsp)
+wsNav : Html Msg
+wsNav =
+    nav [ HA.class "es-wsnav" ]
+        [ button [ HA.class "es-brand", HE.onClick (SetRoute ExamplesRoute), HA.title "Back to examples" ]
+            [ img [ HA.class "es-logo", HA.src "logo.svg", HA.alt "" ] []
+            , span [ HA.class "es-brand-name" ] [ text "elm-svg" ]
             ]
         ]
-
-
-tab : String -> Bool -> Msg -> Html Msg
-tab label active msg =
-    button
-        [ HA.class
-            ("es-tab"
-                ++ (if active then
-                        " es-tab-active"
-
-                    else
-                        ""
-                   )
-            )
-        , HE.onClick msg
-        ]
-        [ text label ]
 
 
 hero : Html Msg
