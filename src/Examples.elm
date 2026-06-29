@@ -130,6 +130,11 @@ trail =
     [ 3, 4, 3.5, 5, 4.5, 6, 5.5, 7, 6.5, 8, 7.5, 9 ]
 
 
+cashflow : List ( String, Float )
+cashflow =
+    [ ( "Start", 50 ), ( "Sales", 80 ), ( "Refund", -20 ), ( "Costs", -35 ), ( "Tax", -12 ) ]
+
+
 {-| The gallery, at the given size, with size buttons that send `onSize`. -}
 view : Float -> (Float -> msg) -> Html msg
 view size onSize =
@@ -167,6 +172,7 @@ view size onSize =
             , card "Trend line" "Chart.scatter (Chart.withTrend True cfg) cloud" "A least-squares regression line over the points." (Chart.scatter (Chart.withTrend True cfg) cloud)
             , card "Reference marks" "Chart.bars (Chart.withRefLine 160 \"goal\" …) sales" "A target line and a tolerance band behind the data." (Chart.bars (Chart.withRefLine 160 "goal" (Chart.withRefBand 150 175 "ok" cfg)) sales)
             , card "Sparkline" "Chart.sparkline (Chart.sized 220 52) trail" "A tiny, axis-less line for inline use." (Chart.sparkline (Chart.sized 220 52) trail)
+            , card "Waterfall" "Chart.waterfall cfg cashflow" "Floating bars bridge a start value to an end through up/down contributions." (Chart.waterfall cfg cashflow)
             , card "Formatted axis" "Chart.withFormat (Format.prefixed \"$\" …)" "Number formatting on ticks and value labels — money, percent, compact k/M." (Chart.bars (Chart.withFormat (Format.prefixed "$" (Format.decimals 0)) (Chart.withValues True cfg)) sales)
             , card "Titled & dark" "Chart.bars (Chart.withTitle \"Sales\" …) sales" "Chart and axis titles, on the dark theme — Chart.darken keeps the slider size." (Chart.bars (Chart.withTitle "Sales" (Chart.withAxisTitles "month" "" (Chart.darken cfg))) sales)
             ]

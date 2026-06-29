@@ -5,7 +5,7 @@ module Chart exposing
     , bars, hbars, line, scatter, multiLine, bubble
     , area, stackedArea, stackedBars, groupedBars
     , histogram, pie, donut, radar
-    , boxplot, candlestick, heatmap, sparkline
+    , boxplot, candlestick, heatmap, sparkline, waterfall
     , frame, xAxis, polylineOf, dotsOf, legend
     )
 
@@ -37,7 +37,7 @@ at the call site.
 @docs bars, hbars, line, scatter, multiLine, bubble
 @docs area, stackedArea, stackedBars, groupedBars
 @docs histogram, pie, donut, radar
-@docs boxplot, candlestick, heatmap, sparkline
+@docs boxplot, candlestick, heatmap, sparkline, waterfall
 
 
 # Building blocks
@@ -1211,6 +1211,77 @@ sparkline c values =
                     []
     in
     root c (strokeLine c c.color (linePoints c pts) :: lastDot)
+
+
+{-| A waterfall chart of `(label, delta)` steps: each bar floats from the running total to the new
+total, green for a rise and red for a fall, with connectors between them. Good for bridging a start
+value to an end value through its contributions.
+-}
+waterfall : Config -> List ( String, Float ) -> Svg msg
+waterfall c data =
+    let
+        deltas =
+            List.map Tuple.second data
+
+        -- (start level, end level) for each bar, walking the running total from zero
+        levels =
+            Tuple.first (List.foldl (\d ( acc, t ) -> ( acc ++ [ ( t, t + d ) ], t + d )) ( [], 0 ) deltas)
+
+        zipped =
+            List.map2 Tuple.pair data levels
+
+        yS =
+            yScaleFor c (0 :: List.concatMap (\( s, e ) -> [ s, e ]) levels)
+
+        count =
+            List.length data
+
+        slot =
+            plotW c / toFloat (Basics.max 1 count)
+
+        barW =
+            slot * 0.6
+
+        cxOf i =
+            c.left + slot * (toFloat i + 0.5)
+
+        bar i ( ( lbl, d ), ( s, e ) ) =
+            let
+                ys =
+                    Scale.convert yS s
+
+                ye =
+                    Scale.convert yS e
+
+                color =
+                    if d >= 0 then
+                        "#0f9d58"
+
+                    else
+                        "#d6336c"
+
+                sign =
+                    if d >= 0 then
+                        "+"
+
+                    else
+                        ""
+            in
+            Svg.g []
+                [ Svg.rect
+                    [ SA.x (Scale.num (cxOf i - barW / 2)), SA.y (Scale.num (Basics.min ys ye)), SA.width (Scale.num barW), SA.height (Scale.num (Basics.max 0.5 (abs (ys - ye)))), SA.fill color ]
+                    (tip c (lbl ++ ": " ++ sign ++ c.format d ++ " (= " ++ c.format e ++ ")"))
+                , xLabel c count (cxOf i) lbl
+                ]
+
+        connector i ( _, ( _, e ) ) =
+            if i < count - 1 then
+                [ Svg.line [ SA.x1 (Scale.num (cxOf i + barW / 2)), SA.y1 (Scale.num (Scale.convert yS e)), SA.x2 (Scale.num (cxOf (i + 1) - barW / 2)), SA.y2 (Scale.num (Scale.convert yS e)), SA.stroke c.axis, SA.strokeWidth "1" ] [] ]
+
+            else
+                []
+    in
+    root c (frame c yS ++ List.concat (List.indexedMap connector zipped) ++ List.indexedMap bar zipped)
 
 
 
