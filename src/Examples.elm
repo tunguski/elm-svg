@@ -135,6 +135,11 @@ cashflow =
     [ ( "Start", 50 ), ( "Sales", 80 ), ( "Refund", -20 ), ( "Costs", -35 ), ( "Tax", -12 ) ]
 
 
+ranks : List ( String, Float, Float )
+ranks =
+    [ ( "Rust", 70, 87 ), ( "Elm", 60, 74 ), ( "Go", 75, 69 ), ( "Haskell", 50, 58 ), ( "C", 55, 46 ) ]
+
+
 {-| The gallery, at the given size, with size buttons that send `onSize`. -}
 view : Float -> (Float -> msg) -> Html msg
 view size onSize =
@@ -176,6 +181,7 @@ view size onSize =
             , card "Waterfall" "Chart.waterfall cfg cashflow" "Floating bars bridge a start value to an end through up/down contributions." (Chart.waterfall cfg cashflow)
             , card "Gauge" "Chart.gauge cfg 0 100 72" "A single headline value as a dial — for KPIs on a dashboard." (Chart.gauge cfg 0 100 72)
             , card "Lollipop" "Chart.lollipop cfg sales" "Stems topped with dots — a lighter alternative to bars." (Chart.lollipop cfg sales)
+            , card "Slope chart" "Chart.slope cfg \"2019\" \"2024\" ranks" "Value or rank changes between two periods — green up, red down." (Chart.slope cfg "2019" "2024" ranks)
             , card "Formatted axis" "Chart.withFormat (Format.prefixed \"$\" …)" "Number formatting on ticks and value labels — money, percent, compact k/M." (Chart.bars (Chart.withFormat (Format.prefixed "$" (Format.decimals 0)) (Chart.withValues True cfg)) sales)
             , card "Titled & dark" "Chart.bars (Chart.withTitle \"Sales\" …) sales" "Chart and axis titles, on the dark theme — Chart.darken keeps the slider size." (Chart.bars (Chart.withTitle "Sales" (Chart.withAxisTitles "month" "" (Chart.darken cfg))) sales)
             ]

@@ -2,7 +2,7 @@ module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
     , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
-    , bars, hbars, lollipop, line, scatter, multiLine, bubble
+    , bars, hbars, lollipop, line, scatter, multiLine, bubble, slope
     , area, stackedArea, stackedBars, groupedBars, percentBars
     , histogram, pie, donut, radar
     , boxplot, candlestick, heatmap, sparkline, waterfall, gauge
@@ -34,7 +34,7 @@ at the call site.
 
 # Charts
 
-@docs bars, hbars, lollipop, line, scatter, multiLine, bubble
+@docs bars, hbars, lollipop, line, scatter, multiLine, bubble, slope
 @docs area, stackedArea, stackedBars, groupedBars, percentBars
 @docs histogram, pie, donut, radar
 @docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge
@@ -1433,6 +1433,62 @@ percentBars c data =
             Svg.g [] (rects ++ [ xLabel c count cx lbl ])
     in
     root c (frame cPct yS ++ List.indexedMap bar normed ++ [ legend c seriesNames ])
+
+
+{-| A slope chart comparing each `(label, before, after)` across two periods (named `leftName` and
+`rightName`): a line per item between its two values, green if it rose and red if it fell. Good for
+showing rank or value changes between two points in time.
+-}
+slope : Config -> String -> String -> List ( String, Float, Float ) -> Svg msg
+slope c leftName rightName data =
+    let
+        yS =
+            yScaleRaw c (List.concatMap (\( _, a, b ) -> [ a, b ]) data)
+
+        leftX =
+            c.left + plotW c * 0.2
+
+        rightX =
+            c.left + plotW c * 0.8
+
+        endText anchor x y txt =
+            Svg.text_ [ SA.x (Scale.num x), SA.y (Scale.num y), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor anchor ] [ Svg.text txt ]
+
+        row ( lbl, a, b ) =
+            let
+                ya =
+                    Scale.convert yS a
+
+                yb =
+                    Scale.convert yS b
+
+                color =
+                    if b > a then
+                        "#0f9d58"
+
+                    else if b < a then
+                        "#d6336c"
+
+                    else
+                        c.axis
+
+                txt =
+                    lbl ++ ": " ++ c.format a ++ " → " ++ c.format b
+            in
+            Svg.g []
+                [ Svg.line [ SA.x1 (Scale.num leftX), SA.y1 (Scale.num ya), SA.x2 (Scale.num rightX), SA.y2 (Scale.num yb), SA.stroke color, SA.strokeWidth (Scale.num c.stroke) ] []
+                , dot c color c.dotR ( leftX, ya ) txt
+                , dot c color c.dotR ( rightX, yb ) txt
+                , endText "end" (leftX - 6) (ya + 3) (clip lbl)
+                , endText "start" (rightX + 6) (yb + 3) (c.format b)
+                ]
+
+        headers =
+            [ endText "middle" leftX (c.top - 4) leftName
+            , endText "middle" rightX (c.top - 4) rightName
+            ]
+    in
+    root c (headers ++ List.map row data)
 
 
 
