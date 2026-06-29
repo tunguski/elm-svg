@@ -140,6 +140,11 @@ ranks =
     [ ( "Rust", 70, 87 ), ( "Elm", 60, 74 ), ( "Go", 75, 69 ), ( "Haskell", 50, 58 ), ( "C", 55, 46 ) ]
 
 
+measured : List ( Float, Float, Float )
+measured =
+    [ ( 1, 2.1, 0.4 ), ( 2, 3.0, 0.5 ), ( 3, 2.6, 0.3 ), ( 4, 4.2, 0.6 ), ( 5, 4.0, 0.4 ), ( 6, 5.3, 0.5 ) ]
+
+
 {-| The gallery, at the given size, with size buttons that send `onSize`. -}
 view : Float -> (Float -> msg) -> Html msg
 view size onSize =
@@ -176,6 +181,7 @@ view size onSize =
             , card "Candlestick" "Chart.candlestick cfg ohlc" "Open/high/low/close — up days green, down days red." (Chart.candlestick cfg ohlc)
             , card "Heatmap" "Chart.heatmap cfg cols rows grid" "A grid shaded along a colour ramp; hover for values." (Chart.heatmap cfg heatCols heatRows heatVals)
             , card "Trend line" "Chart.scatter (Chart.withTrend True cfg) cloud" "A least-squares regression line over the points." (Chart.scatter (Chart.withTrend True cfg) cloud)
+            , card "Error bars" "Chart.scatterErr cfg measured" "Points with a vertical y ± error whisker each." (Chart.scatterErr cfg measured)
             , card "Reference marks" "Chart.bars (Chart.withRefLine 160 \"goal\" …) sales" "A target line and a tolerance band behind the data." (Chart.bars (Chart.withRefLine 160 "goal" (Chart.withRefBand 150 175 "ok" cfg)) sales)
             , card "Sparkline" "Chart.sparkline (Chart.sized 220 52) trail" "A tiny, axis-less line for inline use." (Chart.sparkline (Chart.sized 220 52) trail)
             , card "Waterfall" "Chart.waterfall cfg cashflow" "Floating bars bridge a start value to an end through up/down contributions." (Chart.waterfall cfg cashflow)

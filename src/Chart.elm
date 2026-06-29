@@ -2,7 +2,7 @@ module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
     , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
-    , bars, hbars, lollipop, line, scatter, multiLine, bubble, slope
+    , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope
     , area, stackedArea, stackedBars, groupedBars, percentBars
     , histogram, pie, donut, radar
     , boxplot, candlestick, heatmap, sparkline, waterfall, gauge
@@ -34,7 +34,7 @@ at the call site.
 
 # Charts
 
-@docs bars, hbars, lollipop, line, scatter, multiLine, bubble, slope
+@docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope
 @docs area, stackedArea, stackedBars, groupedBars, percentBars
 @docs histogram, pie, donut, radar
 @docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge
@@ -1489,6 +1489,40 @@ slope c leftName rightName data =
             ]
     in
     root c (headers ++ List.map row data)
+
+
+{-| A scatter plot of `(x, y, error)` points, each with a vertical error bar spanning `y ± error`. -}
+scatterErr : Config -> List ( Float, Float, Float ) -> Svg msg
+scatterErr c data =
+    let
+        ( xlo, xhi ) =
+            Scale.niceBoundsRounded 5 (Scale.niceBounds (List.map (\( x, _, _ ) -> x) data))
+
+        xS =
+            Scale.linear ( xlo, xhi ) ( c.left, c.left + plotW c )
+
+        yS =
+            yScaleFor c (List.concatMap (\( _, y, e ) -> [ y - e, y + e ]) data)
+
+        mark ( x, y, e ) =
+            let
+                px =
+                    Scale.convert xS x
+
+                top =
+                    Scale.convert yS (y + e)
+
+                bot =
+                    Scale.convert yS (y - e)
+            in
+            Svg.g []
+                [ Svg.line [ SA.x1 (Scale.num px), SA.y1 (Scale.num top), SA.x2 (Scale.num px), SA.y2 (Scale.num bot), SA.stroke c.color, SA.strokeWidth "1" ] []
+                , Svg.line [ SA.x1 (Scale.num (px - 3)), SA.y1 (Scale.num top), SA.x2 (Scale.num (px + 3)), SA.y2 (Scale.num top), SA.stroke c.color, SA.strokeWidth "1" ] []
+                , Svg.line [ SA.x1 (Scale.num (px - 3)), SA.y1 (Scale.num bot), SA.x2 (Scale.num (px + 3)), SA.y2 (Scale.num bot), SA.stroke c.color, SA.strokeWidth "1" ] []
+                , dot c c.color c.dotR ( px, Scale.convert yS y ) ("(" ++ Scale.num x ++ ", " ++ Scale.num y ++ " ± " ++ Scale.num e ++ ")")
+                ]
+    in
+    root c (frame c yS ++ xAxis c xS ++ List.map mark data)
 
 
 
