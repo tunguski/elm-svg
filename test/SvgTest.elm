@@ -10,6 +10,7 @@ import Curve
 import Expect
 import Format
 import Layout
+import Path
 import Scale
 import Stat
 import Test exposing (Test, describe, test)
@@ -31,6 +32,7 @@ suite =
         , statTests
         , numberFormatTests
         , layoutTests
+        , pathTests
         , formatTests
         ]
 
@@ -331,6 +333,32 @@ layoutTests =
             \_ -> Expect.equal (Layout.treemap ( 0, 0, 40, 20 ) [ 5 ]) [ ( 0, 0, 40, 20 ) ]
         , test "an empty list yields no rectangles" <|
             \_ -> Expect.equal (Layout.treemap ( 0, 0, 100, 100 ) []) []
+        ]
+
+
+pathTests : Test
+pathTests =
+    describe "Path"
+        [ test "builds a closed triangle" <|
+            \_ ->
+                Expect.equal
+                    (Path.empty |> Path.moveTo 0 0 |> Path.lineTo 10 0 |> Path.lineTo 5 8 |> Path.close |> Path.toString)
+                    "M 0 0 L 10 0 L 5 8 Z"
+        , test "emits a cubic curve command" <|
+            \_ ->
+                Expect.equal
+                    (Path.empty |> Path.moveTo 0 0 |> Path.curveTo 1 2 3 4 5 6 |> Path.toString)
+                    "M 0 0 C 1 2 3 4 5 6"
+        , test "arc flags render as 0/1" <|
+            \_ ->
+                Expect.equal
+                    (Path.empty |> Path.moveTo 0 0 |> Path.arcTo 10 10 0 True False 20 0 |> Path.toString)
+                    "M 0 0 A 10 10 0 1 0 20 0"
+        , test "polygon closes the point loop" <|
+            \_ ->
+                Expect.equal
+                    (Path.toString (Path.polygon [ ( 0, 0 ), ( 4, 0 ), ( 4, 4 ) ]))
+                    "M 0 0 L 4 0 L 4 4 Z"
         ]
 
 
