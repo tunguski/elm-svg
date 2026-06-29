@@ -1,6 +1,6 @@
 module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
-    , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
+    , withColor, withPalette, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
     , RefMark, withRefLine, withRefBand, LegendPos(..), withLegend
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
@@ -29,7 +29,7 @@ at the call site.
 # Config
 
 @docs Config, defaults, dark, darken, sized, colored, palette
-@docs withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
+@docs withColor, withPalette, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
 @docs withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
 @docs RefMark, withRefLine, withRefBand, LegendPos, withLegend
 
@@ -89,6 +89,7 @@ type alias Config =
     , bottom : Float
     , left : Float
     , color : String
+    , palette : List String
     , axis : String
     , label : String
     , grid : String
@@ -126,6 +127,7 @@ defaults =
     , bottom = 28
     , left = 40
     , color = "#5b6ef5"
+    , palette = palette
     , axis = "#9aa7bd"
     , label = "#61708a"
     , grid = "#e7ecf4"
@@ -193,6 +195,14 @@ colored color =
 withColor : String -> Config -> Config
 withColor color c =
     { c | color = color }
+
+
+{-| Set the qualitative colour palette used to colour the series/categories of multi-colour charts
+(multi-series lines, stacked/grouped bars, pie, treemap, …). Cycles if there are more series than
+colours; an empty list falls back to the built-in [`palette`](#palette). -}
+withPalette : List String -> Config -> Config
+withPalette colors c =
+    { c | palette = colors }
 
 
 {-| Turn horizontal gridlines on (default) or off. -}
@@ -568,7 +578,7 @@ scatter c data =
                     at x =
                         ( Scale.convert xS x, Scale.convert yS (fit.slope * x + fit.intercept) )
                 in
-                [ strokeLine c (colorAt 1) [ at xlo, at xhi ] ]
+                [ strokeLine c (colorAt c 1) [ at xlo, at xhi ] ]
 
             else
                 []
@@ -599,7 +609,7 @@ multiLine c serieses =
             List.map (\( x, y ) -> ( Scale.convert xS x, Scale.convert yS y )) pts
 
         draw i ( _, pts ) =
-            strokeLine c (colorAt i) (curved c (place pts))
+            strokeLine c (colorAt c i) (curved c (place pts))
     in
     root c
         (frame c yS
@@ -655,7 +665,7 @@ stackedArea c serieses =
 
         -- draw from the top band down so lower bands paint over the baseline gap
         draw i band =
-            areaBand (colorAt i) zeroY (curved c (place band))
+            areaBand (colorAt c i) zeroY (curved c (place band))
     in
     root c
         (frame c yS
@@ -709,7 +719,7 @@ stackedBars c data =
                         , SA.y (Scale.num yTop)
                         , SA.width (Scale.num barW)
                         , SA.height (Scale.num (Basics.max 0.5 (abs (yBot - yTop))))
-                        , SA.fill (colorAt j)
+                        , SA.fill (colorAt c j)
                         ]
                         (tip c (name ++ ": " ++ Scale.num v))
                    ]
@@ -777,7 +787,7 @@ groupedBars c data =
                 , SA.y (Scale.num (Basics.min y zeroY))
                 , SA.width (Scale.num (subW * 0.8))
                 , SA.height (Scale.num (Basics.max 0.5 (abs (zeroY - y))))
-                , SA.fill (colorAt j)
+                , SA.fill (colorAt c j)
                 ]
                 (tip c (name ++ ": " ++ Scale.num v))
 
@@ -829,7 +839,7 @@ pieDonut c innerFrac data =
             in
             Svg.polyline
                 [ SA.points (Scale.pointsString pts)
-                , SA.fill (colorAt i)
+                , SA.fill (colorAt c i)
                 , SA.stroke c.background
                 , SA.strokeWidth "1"
                 ]
@@ -940,7 +950,7 @@ bubble c data =
                 [ SA.cx (Scale.num (Scale.convert xS x))
                 , SA.cy (Scale.num (Scale.convert yS y))
                 , SA.r (Scale.num (sqrt t * maxR))
-                , SA.fill (Scale.interpolateColor (colorAt 0) (colorAt 1) t)
+                , SA.fill (Scale.interpolateColor (colorAt c 0) (colorAt c 1) t)
                 , SA.fillOpacity "0.65"
                 ]
                 (tip c ("(" ++ Scale.num x ++ ", " ++ Scale.num y ++ ") · " ++ Scale.num s))
@@ -1111,7 +1121,7 @@ streamgraph c serieses =
         bandPoly i ( name, ( lower, upper ) ) =
             Svg.polyline
                 [ SA.points (Scale.pointsString (curved c (toPx upper) ++ List.reverse (curved c (toPx lower))))
-                , SA.fill (colorAt i)
+                , SA.fill (colorAt c i)
                 , SA.fillOpacity "0.85"
                 , SA.stroke c.background
                 , SA.strokeWidth "0.5"
@@ -1165,8 +1175,8 @@ pyramid c leftName rightName data =
                     r / maxV * halfW
             in
             Svg.g []
-                [ Svg.rect [ SA.x (Scale.num (leftEdge - ll)), SA.y (Scale.num (cy - barH / 2)), SA.width (Scale.num (Basics.max 0.5 ll)), SA.height (Scale.num barH), SA.fill (colorAt 0) ] (tip c (leftName ++ " " ++ lbl ++ ": " ++ c.format l))
-                , Svg.rect [ SA.x (Scale.num rightEdge), SA.y (Scale.num (cy - barH / 2)), SA.width (Scale.num (Basics.max 0.5 rl)), SA.height (Scale.num barH), SA.fill (colorAt 1) ] (tip c (rightName ++ " " ++ lbl ++ ": " ++ c.format r))
+                [ Svg.rect [ SA.x (Scale.num (leftEdge - ll)), SA.y (Scale.num (cy - barH / 2)), SA.width (Scale.num (Basics.max 0.5 ll)), SA.height (Scale.num barH), SA.fill (colorAt c 0) ] (tip c (leftName ++ " " ++ lbl ++ ": " ++ c.format l))
+                , Svg.rect [ SA.x (Scale.num rightEdge), SA.y (Scale.num (cy - barH / 2)), SA.width (Scale.num (Basics.max 0.5 rl)), SA.height (Scale.num barH), SA.fill (colorAt c 1) ] (tip c (rightName ++ " " ++ lbl ++ ": " ++ c.format r))
                 , Svg.text_ [ SA.x (Scale.num midX), SA.y (Scale.num (cy + 3)), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor "middle" ] [ Svg.text (clip lbl) ]
                 ]
     in
@@ -1212,7 +1222,7 @@ bump c serieses =
                 pts =
                     List.map (\j -> ( Scale.convert xS (toFloat j), Scale.convert yS (toFloat (rankOf si j)) )) (List.range 0 (periods - 1))
             in
-            strokeLine c (colorAt si) pts :: List.map (\p -> dot c (colorAt si) (c.dotR * 1.5) p name) pts
+            strokeLine c (colorAt c si) pts :: List.map (\p -> dot c (colorAt c si) (c.dotR * 1.5) p name) pts
 
         periodLabels =
             List.map (\j -> valueLabel c (Scale.convert xS (toFloat j)) (c.top + plotH c + 13) (String.fromInt (j + 1))) (List.range 0 (periods - 1))
@@ -1277,9 +1287,9 @@ radar c axes serieses =
         poly i ( _, vals ) =
             Svg.polyline
                 [ SA.points (Scale.pointsString (closeLoop (List.indexedMap (\j v -> Arc.pointOnCircle center (radius * (Basics.max 0 v / maxV)) (angleOf j)) vals)))
-                , SA.fill (colorAt i)
+                , SA.fill (colorAt c i)
                 , SA.fillOpacity "0.12"
-                , SA.stroke (colorAt i)
+                , SA.stroke (colorAt c i)
                 , SA.strokeWidth (Scale.num c.stroke)
                 ]
                 []
@@ -1699,7 +1709,7 @@ percentBars c data =
             ( cum + v
             , acc
                 ++ [ Svg.rect
-                        [ SA.x (Scale.num (cx - barW / 2)), SA.y (Scale.num (Scale.convert yS (cum + v))), SA.width (Scale.num barW), SA.height (Scale.num (Basics.max 0.5 (abs (Scale.convert yS cum - Scale.convert yS (cum + v))))), SA.fill (colorAt j) ]
+                        [ SA.x (Scale.num (cx - barW / 2)), SA.y (Scale.num (Scale.convert yS (cum + v))), SA.width (Scale.num barW), SA.height (Scale.num (Basics.max 0.5 (abs (Scale.convert yS cum - Scale.convert yS (cum + v))))), SA.fill (colorAt c j) ]
                         (tip c (name ++ ": " ++ Scale.num v ++ "%"))
                    ]
             )
@@ -1830,7 +1840,7 @@ treemap c data =
         cell i ( ( lbl, v ), ( x, y, w, h ) ) =
             Svg.g []
                 [ Svg.rect
-                    [ SA.x (Scale.num x), SA.y (Scale.num y), SA.width (Scale.num w), SA.height (Scale.num h), SA.fill (colorAt i), SA.stroke border, SA.strokeWidth "1" ]
+                    [ SA.x (Scale.num x), SA.y (Scale.num y), SA.width (Scale.num w), SA.height (Scale.num h), SA.fill (colorAt c i), SA.stroke border, SA.strokeWidth "1" ]
                     (tip c (lbl ++ ": " ++ c.format v))
                 , if w > 34 && h > 14 then
                     Svg.text_
@@ -1881,7 +1891,7 @@ funnel c data =
             in
             Svg.g []
                 [ Svg.rect
-                    [ SA.x (Scale.num (cx - w / 2)), SA.y (Scale.num y), SA.width (Scale.num w), SA.height (Scale.num barH), SA.fill (colorAt i) ]
+                    [ SA.x (Scale.num (cx - w / 2)), SA.y (Scale.num y), SA.width (Scale.num w), SA.height (Scale.num barH), SA.fill (colorAt c i) ]
                     (tip c (lbl ++ ": " ++ c.format v ++ " (" ++ Scale.num (v / first * 100) ++ "% of first)"))
                 , Svg.text_
                     [ SA.x (Scale.num cx), SA.y (Scale.num (y + barH * 0.64)), SA.fill "#ffffff", SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor "middle" ]
@@ -1934,7 +1944,7 @@ gantt c data =
             in
             Svg.g []
                 [ Svg.rect
-                    [ SA.x (Scale.num (Basics.min x0 x1)), SA.y (Scale.num (cy - barH / 2)), SA.width (Scale.num (Basics.max 1 (abs (x1 - x0)))), SA.height (Scale.num barH), SA.fill (colorAt i) ]
+                    [ SA.x (Scale.num (Basics.min x0 x1)), SA.y (Scale.num (cy - barH / 2)), SA.width (Scale.num (Basics.max 1 (abs (x1 - x0)))), SA.height (Scale.num barH), SA.fill (colorAt c i) ]
                     (tip c (lbl ++ ": " ++ c.format s ++ "–" ++ c.format e))
                 , tickLabel c (c.left - 5) (cy + 3) (clip lbl)
                 ]
@@ -1972,8 +1982,8 @@ dumbbell c data =
             in
             Svg.g []
                 [ Svg.line [ SA.x1 (Scale.num xl), SA.y1 (Scale.num cy), SA.x2 (Scale.num xh), SA.y2 (Scale.num cy), SA.stroke c.axis, SA.strokeWidth "2" ] []
-                , dot c (colorAt 0) (c.dotR * 1.6) ( xl, cy ) (lbl ++ " low: " ++ c.format low)
-                , dot c (colorAt 1) (c.dotR * 1.6) ( xh, cy ) (lbl ++ " high: " ++ c.format high)
+                , dot c (colorAt c 0) (c.dotR * 1.6) ( xl, cy ) (lbl ++ " low: " ++ c.format low)
+                , dot c (colorAt c 1) (c.dotR * 1.6) ( xh, cy ) (lbl ++ " high: " ++ c.format high)
                 , tickLabel c (c.left - 5) (cy + 3) (clip lbl)
                 ]
     in
@@ -2036,7 +2046,7 @@ pareto c data =
 
         rightTick p =
             Svg.text_
-                [ SA.x (Scale.num (right + 4)), SA.y (Scale.num (Scale.convert yS2 p + 3)), SA.fill (colorAt 1), SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor "start" ]
+                [ SA.x (Scale.num (right + 4)), SA.y (Scale.num (Scale.convert yS2 p + 3)), SA.fill (colorAt c 1), SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor "start" ]
                 [ Svg.text (Scale.num p ++ "%") ]
     in
     root c
@@ -2044,7 +2054,7 @@ pareto c data =
             ++ [ axisLine c right c.top right (c.top + plotH c) ]
             ++ List.map rightTick [ 0, 25, 50, 75, 100 ]
             ++ List.indexedMap bar sorted
-            ++ (strokeLine c (colorAt 1) linePts :: List.map (\p -> dot c (colorAt 1) c.dotR p "") linePts)
+            ++ (strokeLine c (colorAt c 1) linePts :: List.map (\p -> dot c (colorAt c 1) c.dotR p "") linePts)
         )
 
 
@@ -2079,7 +2089,7 @@ rose c data =
             in
             Svg.polyline
                 [ SA.points (Scale.pointsString (Arc.wedgePoints center (maxR * (v / maxV)) start (start + step)))
-                , SA.fill (colorAt i)
+                , SA.fill (colorAt c i)
                 , SA.fillOpacity "0.75"
                 , SA.stroke c.background
                 , SA.strokeWidth "1"
@@ -2125,7 +2135,7 @@ radialBars c data =
             in
             Svg.g []
                 [ Svg.polyline [ SA.points (Scale.pointsString (Arc.ringPoints center rInner rOuter 0 sweepMax)), SA.fill c.grid, SA.stroke "none" ] []
-                , Svg.polyline [ SA.points (Scale.pointsString (Arc.ringPoints center rInner rOuter 0 (v / maxV * sweepMax))), SA.fill (colorAt i), SA.stroke "none" ] (tip c (lbl ++ ": " ++ c.format v))
+                , Svg.polyline [ SA.points (Scale.pointsString (Arc.ringPoints center rInner rOuter 0 (v / maxV * sweepMax))), SA.fill (colorAt c i), SA.stroke "none" ] (tip c (lbl ++ ": " ++ c.format v))
                 ]
     in
     root c (List.indexedMap bar data ++ [ legend c (List.map Tuple.first data) ])
@@ -2408,7 +2418,7 @@ legend c names =
                         ( xEdge + 13, "start" )
             in
             Svg.g []
-                [ Svg.rect [ SA.x (Scale.num swatchX), SA.y (Scale.num y), SA.width "9", SA.height "9", SA.fill (colorAt i) ] []
+                [ Svg.rect [ SA.x (Scale.num swatchX), SA.y (Scale.num y), SA.width "9", SA.height "9", SA.fill (colorAt c i) ] []
                 , Svg.text_ [ SA.x (Scale.num textX), SA.y (Scale.num (y + 8)), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor anchor ] [ Svg.text (clip name) ]
                 ]
     in
@@ -2601,11 +2611,19 @@ clip s =
         s
 
 
-colorAt : Int -> String
-colorAt i =
-    case List.drop (modBy (List.length palette) i) palette of
-        c :: _ ->
-            c
+colorAt : Config -> Int -> String
+colorAt c i =
+    let
+        pal =
+            if List.isEmpty c.palette then
+                palette
+
+            else
+                c.palette
+    in
+    case List.drop (modBy (List.length pal) i) pal of
+        x :: _ ->
+            x
 
         [] ->
             "#5b6ef5"
