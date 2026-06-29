@@ -1,9 +1,11 @@
 module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
     , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
+    , withStep, withTrend, RefMark, withRefLine, withRefBand
     , bars, hbars, line, scatter, multiLine, bubble
     , area, stackedArea, stackedBars, groupedBars
     , histogram, pie, donut, radar
+    , boxplot, candlestick, heatmap, sparkline
     , frame, xAxis, polylineOf, dotsOf, legend
     )
 
@@ -27,6 +29,7 @@ at the call site.
 
 @docs Config, defaults, dark, darken, sized, colored, palette
 @docs withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
+@docs withStep, withTrend, RefMark, withRefLine, withRefBand
 
 
 # Charts
@@ -34,6 +37,7 @@ at the call site.
 @docs bars, hbars, line, scatter, multiLine, bubble
 @docs area, stackedArea, stackedBars, groupedBars
 @docs histogram, pie, donut, radar
+@docs boxplot, candlestick, heatmap, sparkline
 
 
 # Building blocks
@@ -45,8 +49,22 @@ at the call site.
 import Arc
 import Curve
 import Scale exposing (Scale)
+import Stat
 import Svg exposing (Svg)
 import Svg.Attributes as SA
+
+
+{-| A horizontal annotation drawn behind a chart: either a reference **line** at one value, or a
+shaded **band** between two. Build these with [`withRefLine`](#withRefLine) /
+[`withRefBand`](#withRefBand) rather than by hand.
+-}
+type alias RefMark =
+    { lo : Float
+    , hi : Float
+    , color : String
+    , label : String
+    , band : Bool
+    }
 
 
 {-| How a chart looks: dimensions, margins, the theme colours/fonts, and a handful of toggles. -}
@@ -71,7 +89,10 @@ type alias Config =
     , showGrid : Bool
     , showValues : Bool
     , curve : Bool
+    , step : Bool
+    , trend : Bool
     , showTips : Bool
+    , refs : List RefMark
     , title : String
     , xTitle : String
     , yTitle : String
@@ -101,7 +122,10 @@ defaults =
     , showGrid = True
     , showValues = False
     , curve = False
+    , step = False
+    , trend = False
     , showTips = True
+    , refs = []
     , title = ""
     , xTitle = ""
     , yTitle = ""
@@ -192,6 +216,32 @@ withTips on c =
     { c | showTips = on }
 
 
+{-| Draw line/area series as a step (stair) instead of straight segments — good for values that
+hold then jump. Takes precedence over [`withCurve`](#withCurve).
+-}
+withStep : Bool -> Config -> Config
+withStep on c =
+    { c | step = on }
+
+
+{-| Overlay a least-squares trend line on a [`scatter`](#scatter). -}
+withTrend : Bool -> Config -> Config
+withTrend on c =
+    { c | trend = on }
+
+
+{-| Add a horizontal reference line at `value` (e.g. a target or threshold), labelled at the right. -}
+withRefLine : Float -> String -> Config -> Config
+withRefLine value label c =
+    { c | refs = c.refs ++ [ { lo = value, hi = value, color = "#e8590c", label = label, band = False } ] }
+
+
+{-| Add a shaded reference band between `lo` and `hi` (e.g. a tolerance zone), labelled at the right. -}
+withRefBand : Float -> Float -> String -> Config -> Config
+withRefBand lo hi label c =
+    { c | refs = c.refs ++ [ { lo = lo, hi = hi, color = "#e8590c", label = label, band = True } ] }
+
+
 {-| A small qualitative colour palette for multi-series charts. -}
 palette : List String
 palette =
@@ -221,6 +271,53 @@ yScaleFor c values =
             Scale.niceBoundsRounded 5 (Scale.niceBounds values)
     in
     Scale.linear ( lo, hi ) ( c.top + plotH c, c.top )
+
+
+{-| Like [`yScaleFor`](#yScaleFor) but scaled to the data's own min…max (no forced zero baseline) —
+for distributions and prices where zero is not the reference. -}
+yScaleRaw : Config -> List Float -> Scale
+yScaleRaw c values =
+    let
+        lo =
+            List.minimum values |> Maybe.withDefault 0
+
+        hi =
+            List.maximum values |> Maybe.withDefault 1
+
+        ( a, b ) =
+            Scale.niceBoundsRounded 5
+                (if lo == hi then
+                    ( lo - 1, hi + 1 )
+
+                 else
+                    ( lo, hi )
+                )
+    in
+    Scale.linear ( a, b ) ( c.top + plotH c, c.top )
+
+
+{-| The pixel points to stroke for a line/area series: a step (stair) if the `Config` asks, else a
+smooth curve if it does, else the points unchanged. -}
+linePoints : Config -> List ( Float, Float ) -> List ( Float, Float )
+linePoints c pts =
+    if c.step then
+        stepped pts
+
+    else
+        curved c pts
+
+
+stepped : List ( Float, Float ) -> List ( Float, Float )
+stepped pts =
+    case pts of
+        first :: _ ->
+            first
+                :: List.concatMap
+                    (\( ( _, y0 ), ( x1, y1 ) ) -> [ ( x1, y0 ), ( x1, y1 ) ])
+                    (List.map2 Tuple.pair pts (List.drop 1 pts))
+
+        [] ->
+            []
 
 
 root : Config -> List (Svg msg) -> Svg msg
@@ -334,7 +431,7 @@ line c data =
                 (\i ( lbl, v ) -> dot c c.color c.dotR ( Scale.convert xS (toFloat i), Scale.convert yS v ) (lbl ++ ": " ++ Scale.num v))
                 data
     in
-    root c (frame c yS ++ (strokeLine c c.color (curved c pts) :: tips ++ labels))
+    root c (frame c yS ++ (strokeLine c c.color (linePoints c pts) :: tips ++ labels))
 
 
 {-| An area chart of `(label, value)` pairs: a line with the region down to the baseline filled. -}
@@ -368,7 +465,7 @@ area c data =
                 data
 
         shape =
-            curved c pts
+            linePoints c pts
     in
     root c
         (frame c yS
@@ -397,8 +494,22 @@ scatter c data =
             List.map
                 (\( x, y ) -> dot c c.color c.dotR ( Scale.convert xS x, Scale.convert yS y ) ("(" ++ Scale.num x ++ ", " ++ Scale.num y ++ ")"))
                 data
+
+        trendLine =
+            if c.trend then
+                let
+                    fit =
+                        Stat.linearRegression data
+
+                    at x =
+                        ( Scale.convert xS x, Scale.convert yS (fit.slope * x + fit.intercept) )
+                in
+                [ strokeLine c (colorAt 1) [ at xlo, at xhi ] ]
+
+            else
+                []
     in
-    root c (frame c yS ++ xAxis c xS ++ dots)
+    root c (frame c yS ++ xAxis c xS ++ trendLine ++ dots)
 
 
 {-| Several named `(x, y)` line series, each in a palette colour, with a legend. -}
@@ -890,12 +1001,214 @@ radar c axes serieses =
         )
 
 
+{-| A box-and-whisker plot: each category is `(label, sample)` over a raw `List Float`. The box
+spans the quartiles with the median marked, and whiskers reach the sample min and max (via the
+tested [`Stat`](Stat) module).
+-}
+boxplot : Config -> List ( String, List Float ) -> Svg msg
+boxplot c data =
+    let
+        yS =
+            yScaleRaw c (List.concatMap Tuple.second data)
+
+        count =
+            List.length data
+
+        slot =
+            plotW c / toFloat (Basics.max 1 count)
+
+        boxW =
+            slot * 0.5
+
+        box i ( lbl, sample ) =
+            let
+                cx =
+                    c.left + slot * (toFloat i + 0.5)
+
+                ( q1, q2, q3 ) =
+                    Stat.quartiles sample
+
+                lo =
+                    List.minimum sample |> Maybe.withDefault q1
+
+                hi =
+                    List.maximum sample |> Maybe.withDefault q3
+
+                ( yq1, yq3 ) =
+                    ( Scale.convert yS q1, Scale.convert yS q3 )
+
+                ( ylo, yhi ) =
+                    ( Scale.convert yS lo, Scale.convert yS hi )
+
+                yq2 =
+                    Scale.convert yS q2
+
+                txt =
+                    lbl ++ ": min " ++ Scale.num lo ++ ", Q1 " ++ Scale.num q1 ++ ", med " ++ Scale.num q2 ++ ", Q3 " ++ Scale.num q3 ++ ", max " ++ Scale.num hi
+            in
+            Svg.g []
+                [ axisLine c cx yhi cx ylo
+                , axisLine c (cx - boxW / 4) yhi (cx + boxW / 4) yhi
+                , axisLine c (cx - boxW / 4) ylo (cx + boxW / 4) ylo
+                , Svg.rect
+                    [ SA.x (Scale.num (cx - boxW / 2)), SA.y (Scale.num (Basics.min yq1 yq3)), SA.width (Scale.num boxW), SA.height (Scale.num (Basics.max 0.5 (abs (yq1 - yq3)))), SA.fill c.color, SA.fillOpacity "0.35", SA.stroke c.color, SA.strokeWidth "1" ]
+                    (tip c txt)
+                , Svg.line [ SA.x1 (Scale.num (cx - boxW / 2)), SA.y1 (Scale.num yq2), SA.x2 (Scale.num (cx + boxW / 2)), SA.y2 (Scale.num yq2), SA.stroke c.color, SA.strokeWidth "1.5" ] []
+                , xLabel c count cx lbl
+                ]
+    in
+    root c (frame c yS ++ List.indexedMap box data)
+
+
+{-| An OHLC candlestick chart: each entry is `(label, open, high, low, close)`. Up days (close ≥
+open) are green, down days red; the wick spans high–low, the body open–close.
+-}
+candlestick : Config -> List ( String, Float, Float, Float, Float ) -> Svg msg
+candlestick c data =
+    let
+        yS =
+            yScaleRaw c (List.concatMap (\( _, _, h, l, _ ) -> [ h, l ]) data)
+
+        count =
+            List.length data
+
+        slot =
+            plotW c / toFloat (Basics.max 1 count)
+
+        bodyW =
+            slot * 0.5
+
+        candle i ( lbl, o, h, l, close ) =
+            let
+                cx =
+                    c.left + slot * (toFloat i + 0.5)
+
+                color =
+                    if close >= o then
+                        "#0f9d58"
+
+                    else
+                        "#d6336c"
+
+                ( yo, yc ) =
+                    ( Scale.convert yS o, Scale.convert yS close )
+
+                txt =
+                    lbl ++ ": O " ++ Scale.num o ++ " H " ++ Scale.num h ++ " L " ++ Scale.num l ++ " C " ++ Scale.num close
+            in
+            Svg.g []
+                [ Svg.line [ SA.x1 (Scale.num cx), SA.y1 (Scale.num (Scale.convert yS h)), SA.x2 (Scale.num cx), SA.y2 (Scale.num (Scale.convert yS l)), SA.stroke color, SA.strokeWidth "1" ] []
+                , Svg.rect
+                    [ SA.x (Scale.num (cx - bodyW / 2)), SA.y (Scale.num (Basics.min yo yc)), SA.width (Scale.num bodyW), SA.height (Scale.num (Basics.max 1 (abs (yo - yc)))), SA.fill color ]
+                    (tip c txt)
+                , xLabel c count cx lbl
+                ]
+    in
+    root c (frame c yS ++ List.indexedMap candle data)
+
+
+{-| A heatmap of a grid of values, given the column labels, row labels and the rows themselves (each
+an inner `List Float`). Cells are shaded along a ramp from the grid colour to the accent colour (via
+[`Scale.interpolateColor`](Scale)); hover a cell for its value.
+-}
+heatmap : Config -> List String -> List String -> List (List Float) -> Svg msg
+heatmap c cols rows values =
+    let
+        flat =
+            List.concat values
+
+        lo =
+            List.minimum flat |> Maybe.withDefault 0
+
+        hi =
+            List.maximum flat |> Maybe.withDefault 1
+
+        span =
+            if hi == lo then
+                1
+
+            else
+                hi - lo
+
+        cellW =
+            plotW c / toFloat (Basics.max 1 (List.length cols))
+
+        cellH =
+            plotH c / toFloat (Basics.max 1 (List.length rows))
+
+        cell i j v =
+            Svg.rect
+                [ SA.x (Scale.num (c.left + cellW * toFloat j))
+                , SA.y (Scale.num (c.top + cellH * toFloat i))
+                , SA.width (Scale.num (cellW + 0.5))
+                , SA.height (Scale.num (cellH + 0.5))
+                , SA.fill (Scale.interpolateColor c.grid c.color ((v - lo) / span))
+                ]
+                (tip c (itemAt i rows ++ " / " ++ itemAt j cols ++ ": " ++ Scale.num v))
+
+        cells =
+            List.concat (List.indexedMap (\i rowVals -> List.indexedMap (cell i) rowVals) values)
+
+        colLabels =
+            List.indexedMap (\j name -> valueLabel c (c.left + cellW * (toFloat j + 0.5)) (c.top + plotH c + 12) (clip name)) cols
+
+        rowLabels =
+            List.indexedMap (\i name -> tickLabel c (c.left - 4) (c.top + cellH * (toFloat i + 0.5) + 3) (clip name)) rows
+    in
+    root c (cells ++ colLabels ++ rowLabels)
+
+
+{-| A sparkline: a tiny, axis-less line that fills the whole `Config` size, with a dot on the last
+point. Made for inline use in tables and dense dashboards — size it small with [`sized`](#sized).
+-}
+sparkline : Config -> List Float -> Svg msg
+sparkline c values =
+    let
+        n =
+            List.length values
+
+        pad =
+            2
+
+        xS =
+            Scale.linear ( 0, toFloat (Basics.max 1 (n - 1)) ) ( pad, c.width - pad )
+
+        lo =
+            List.minimum values |> Maybe.withDefault 0
+
+        hi =
+            List.maximum values |> Maybe.withDefault 1
+
+        yS =
+            Scale.linear
+                (if lo == hi then
+                    ( lo - 1, hi + 1 )
+
+                 else
+                    ( lo, hi )
+                )
+                ( c.height - pad, pad )
+
+        pts =
+            List.indexedMap (\i v -> ( Scale.convert xS (toFloat i), Scale.convert yS v )) values
+
+        lastDot =
+            case List.reverse pts of
+                p :: _ ->
+                    [ dot c c.color c.dotR p "" ]
+
+                [] ->
+                    []
+    in
+    root c (strokeLine c c.color (linePoints c pts) :: lastDot)
+
+
 
 -- BUILDING BLOCKS ------------------------------------------------------------
 
 
 {-| The plot furniture for a chart with the given Y scale: gridlines, tick labels, the Y axis, a
-zero baseline and any titles set on the `Config`.
+zero baseline (only when zero is in range), any reference marks and titles set on the `Config`.
 -}
 frame : Config -> Scale -> List (Svg msg)
 frame c yS =
@@ -909,8 +1222,18 @@ frame c yS =
         zeroY =
             Scale.convert yS 0
 
-        tickVals =
-            Scale.niceTicks 5 ( yS.d0, yS.d1 )
+        dLo =
+            Basics.min yS.d0 yS.d1
+
+        dHi =
+            Basics.max yS.d0 yS.d1
+
+        zeroLine =
+            if 0 >= dLo && 0 <= dHi then
+                [ axisLine c left zeroY right zeroY ]
+
+            else
+                []
 
         gridFor v =
             let
@@ -925,11 +1248,63 @@ frame c yS =
             )
                 ++ [ tickLabel c (left - 5) (y + 3) (Scale.num v) ]
     in
-    List.concatMap gridFor tickVals
-        ++ [ axisLine c left c.top left (c.top + plotH c)
-           , axisLine c left zeroY right zeroY
-           ]
+    List.concatMap gridFor (Scale.niceTicks 5 ( yS.d0, yS.d1 ))
+        ++ refMarks c yS
+        ++ [ axisLine c left c.top left (c.top + plotH c) ]
+        ++ zeroLine
         ++ titles c
+
+
+{-| The reference lines and bands set on the `Config`, drawn across the plot at their Y values. -}
+refMarks : Config -> Scale -> List (Svg msg)
+refMarks c yS =
+    let
+        left =
+            c.left
+
+        right =
+            c.left + plotW c
+
+        draw r =
+            if r.band then
+                let
+                    y0 =
+                        Scale.convert yS r.hi
+
+                    y1 =
+                        Scale.convert yS r.lo
+                in
+                [ Svg.rect
+                    [ SA.x (Scale.num left)
+                    , SA.y (Scale.num (Basics.min y0 y1))
+                    , SA.width (Scale.num (right - left))
+                    , SA.height (Scale.num (abs (y1 - y0)))
+                    , SA.fill r.color
+                    , SA.fillOpacity "0.1"
+                    ]
+                    []
+                , refLabel c (right - 3) (Basics.min y0 y1 + 9) r.color r.label
+                ]
+
+            else
+                let
+                    y =
+                        Scale.convert yS r.lo
+                in
+                [ Svg.line
+                    [ SA.x1 (Scale.num left), SA.y1 (Scale.num y), SA.x2 (Scale.num right), SA.y2 (Scale.num y), SA.stroke r.color, SA.strokeWidth "1", SA.strokeDasharray "4 3" ]
+                    []
+                , refLabel c (right - 3) (y - 3) r.color r.label
+                ]
+    in
+    List.concatMap draw c.refs
+
+
+refLabel : Config -> Float -> Float -> String -> String -> Svg msg
+refLabel c x y color txt =
+    Svg.text_
+        [ SA.x (Scale.num x), SA.y (Scale.num y), SA.fill color, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor "end" ]
+        [ Svg.text txt ]
 
 
 {-| A numeric X axis for a chart with the given X scale: 1·2·5 vertical gridlines, tick labels along
@@ -1189,6 +1564,11 @@ pad prev target =
             List.map (\_ -> 0) target
     in
     List.map2 (\_ a -> a) target (prev ++ zeros)
+
+
+itemAt : Int -> List String -> String
+itemAt i xs =
+    List.head (List.drop i xs) |> Maybe.withDefault ""
 
 
 clip : String -> String

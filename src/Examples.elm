@@ -87,6 +87,48 @@ squads =
     [ ( "Red", [ 8, 6, 4, 7, 9, 5 ] ), ( "Blue", [ 5, 9, 7, 6, 4, 8 ] ) ]
 
 
+samples : List ( String, List Float )
+samples =
+    [ ( "Class A", [ 62, 65, 68, 70, 72, 75, 78, 80, 85 ] )
+    , ( "Class B", [ 55, 60, 63, 66, 70, 73, 77, 82, 90 ] )
+    , ( "Class C", [ 70, 72, 74, 75, 77, 79, 80, 82, 84 ] )
+    ]
+
+
+ohlc : List ( String, Float, Float, Float, Float )
+ohlc =
+    [ ( "Mon", 100, 108, 98, 105 )
+    , ( "Tue", 105, 110, 103, 104 )
+    , ( "Wed", 104, 112, 102, 111 )
+    , ( "Thu", 111, 115, 107, 109 )
+    , ( "Fri", 109, 113, 105, 112 )
+    ]
+
+
+heatCols : List String
+heatCols =
+    [ "Mon", "Tue", "Wed", "Thu", "Fri" ]
+
+
+heatRows : List String
+heatRows =
+    [ "9am", "12pm", "3pm", "6pm" ]
+
+
+heatVals : List (List Float)
+heatVals =
+    [ [ 2, 5, 4, 6, 8 ]
+    , [ 9, 12, 10, 14, 15 ]
+    , [ 6, 8, 7, 9, 11 ]
+    , [ 3, 4, 6, 5, 7 ]
+    ]
+
+
+trail : List Float
+trail =
+    [ 3, 4, 3.5, 5, 4.5, 6, 5.5, 7, 6.5, 8, 7.5, 9 ]
+
+
 {-| The gallery, at the given size, with size buttons that send `onSize`. -}
 view : Float -> (Float -> msg) -> Html msg
 view size onSize =
@@ -117,6 +159,13 @@ view size onSize =
             , card "Histogram" "Chart.histogram cfg scores" "A raw list of numbers binned into a distribution." (Chart.histogram cfg scores)
             , card "Radar chart" "Chart.radar cfg axes squads" "Several series compared across shared axes." (Chart.radar cfg radarAxes squads)
             , card "Smooth line" "Chart.line (Chart.withCurve True cfg) temps" "The same line, smoothed with a Catmull-Rom curve." (Chart.line (Chart.withCurve True cfg) temps)
+            , card "Stepped line" "Chart.line (Chart.withStep True cfg) temps" "A stair step — for values that hold then jump." (Chart.line (Chart.withStep True cfg) temps)
+            , card "Box plots" "Chart.boxplot cfg samples" "Quartiles, median and whiskers per sample, from the tested Stat module." (Chart.boxplot cfg samples)
+            , card "Candlestick" "Chart.candlestick cfg ohlc" "Open/high/low/close — up days green, down days red." (Chart.candlestick cfg ohlc)
+            , card "Heatmap" "Chart.heatmap cfg cols rows grid" "A grid shaded along a colour ramp; hover for values." (Chart.heatmap cfg heatCols heatRows heatVals)
+            , card "Trend line" "Chart.scatter (Chart.withTrend True cfg) cloud" "A least-squares regression line over the points." (Chart.scatter (Chart.withTrend True cfg) cloud)
+            , card "Reference marks" "Chart.bars (Chart.withRefLine 160 \"goal\" …) sales" "A target line and a tolerance band behind the data." (Chart.bars (Chart.withRefLine 160 "goal" (Chart.withRefBand 150 175 "ok" cfg)) sales)
+            , card "Sparkline" "Chart.sparkline (Chart.sized 220 52) trail" "A tiny, axis-less line for inline use." (Chart.sparkline (Chart.sized 220 52) trail)
             , card "Titled & dark" "Chart.bars (Chart.withTitle \"Sales\" …) sales" "Chart and axis titles, on the dark theme — Chart.darken keeps the slider size." (Chart.bars (Chart.withTitle "Sales" (Chart.withAxisTitles "month" "" (Chart.darken cfg))) sales)
             ]
         ]

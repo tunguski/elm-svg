@@ -9,6 +9,7 @@ import Arc
 import Curve
 import Expect
 import Scale
+import Stat
 import Test exposing (Test, describe, test)
 
 
@@ -25,6 +26,7 @@ suite =
         , binTests
         , colorTests
         , curveTests
+        , statTests
         , formatTests
         ]
 
@@ -231,6 +233,43 @@ curveTests =
                 within 0.001 1.5 (Maybe.withDefault -99 (List.head (List.drop 3 out) |> Maybe.map Tuple.first))
         , test "leaves fewer than three points untouched" <|
             \_ -> Expect.equal (Curve.smooth [ ( 0, 0 ), ( 1, 1 ) ]) [ ( 0, 0 ), ( 1, 1 ) ]
+        ]
+
+
+statTests : Test
+statTests =
+    describe "Stat"
+        [ test "mean averages the sample" <|
+            \_ -> within 0.001 3 (Stat.mean [ 1, 2, 3, 4, 5 ])
+        , test "median of an odd sample is the middle value" <|
+            \_ -> within 0.001 3 (Stat.median [ 5, 1, 3, 2, 4 ])
+        , test "median of an even sample interpolates" <|
+            \_ -> within 0.001 2.5 (Stat.median [ 1, 2, 3, 4 ])
+        , test "quartiles split the sample" <|
+            \_ ->
+                let
+                    ( q1, q2, q3 ) =
+                        Stat.quartiles [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+                in
+                Expect.equal ( round q1, round q2, round q3 ) ( 3, 5, 7 )
+        , test "stdDev of a flat sample is zero" <|
+            \_ -> within 0.001 0 (Stat.stdDev [ 4, 4, 4 ])
+        , test "stdDev measures spread (population)" <|
+            \_ -> within 0.001 2 (Stat.stdDev [ 1, 5 ])
+        , test "regression recovers a known line" <|
+            \_ ->
+                let
+                    fit =
+                        Stat.linearRegression [ ( 0, 1 ), ( 1, 3 ), ( 2, 5 ), ( 3, 7 ) ]
+                in
+                Expect.equal ( round fit.slope, round fit.intercept ) ( 2, 1 )
+        , test "regression of a vertical spread is flat at mean y" <|
+            \_ ->
+                let
+                    fit =
+                        Stat.linearRegression [ ( 5, 2 ), ( 5, 4 ), ( 5, 6 ) ]
+                in
+                Expect.equal ( fit.slope, round fit.intercept ) ( 0, 4 )
         ]
 
 

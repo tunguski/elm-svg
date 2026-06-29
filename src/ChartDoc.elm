@@ -40,6 +40,7 @@ type ChartKind
     | Pie
     | Donut
     | Histogram
+    | Sparkline
 
 
 {-| Editor messages: change the chart kind, or edit the data. -}
@@ -120,6 +121,9 @@ kindToString kind =
         Histogram ->
             "histogram"
 
+        Sparkline ->
+            "sparkline"
+
 
 kindFromString : String -> ChartKind
 kindFromString s =
@@ -144,6 +148,9 @@ kindFromString s =
 
         "histogram" ->
             Histogram
+
+        "sparkline" ->
+            Sparkline
 
         _ ->
             Bar
@@ -231,6 +238,7 @@ viewDoc env doc =
                 , option [ HA.value "pie", HA.selected (doc.kind == Pie) ] [ text "Pie" ]
                 , option [ HA.value "donut", HA.selected (doc.kind == Donut) ] [ text "Donut" ]
                 , option [ HA.value "histogram", HA.selected (doc.kind == Histogram) ] [ text "Histogram" ]
+                , option [ HA.value "sparkline", HA.selected (doc.kind == Sparkline) ] [ text "Sparkline" ]
                 ]
             ]
         , div [ HA.class "cd-preview" ] [ chartView doc ]
@@ -279,3 +287,6 @@ chartView doc =
 
         Histogram ->
             Chart.histogram c (List.map Tuple.second data)
+
+        Sparkline ->
+            Chart.sparkline c (List.map Tuple.second data)

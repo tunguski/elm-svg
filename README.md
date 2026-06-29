@@ -23,9 +23,11 @@ Chart.donut (Chart.withInner 0.6 Chart.defaults) share
 
 Chart.hbars Chart.defaults ranking      -- horizontal bars (long labels / rankings)
 Chart.histogram Chart.defaults numbers  -- bins a raw List Float into a distribution
+Chart.boxplot Chart.defaults samples    -- List ( String, List Float ) — quartiles + whiskers
+Chart.sparkline (Chart.sized 200 48) ys -- a tiny, axis-less inline line
 
 -- point / multi-series charts
-Chart.scatter Chart.defaults points       -- raw (x, y)
+Chart.scatter Chart.defaults points       -- raw (x, y); add Chart.withTrend True for a fit line
 Chart.bubble Chart.defaults xysize        -- List ( Float, Float, Float ) — area = size
 Chart.multiLine Chart.defaults serieses   -- List ( String, List (Float, Float) ), with a legend
 Chart.stackedArea Chart.defaults serieses
@@ -34,15 +36,23 @@ Chart.radar Chart.defaults axes serieses  -- spider chart over shared axes
 -- segmented bars: List ( String, List ( String, Float ) ) — (category, [(series, value)])
 Chart.stackedBars Chart.defaults revenue
 Chart.groupedBars Chart.defaults revenue
+
+-- financial: List ( String, open, high, low, close )
+Chart.candlestick Chart.defaults ohlc
+
+-- a grid: column labels, row labels, rows of values
+Chart.heatmap Chart.defaults cols rows grid
 ```
 
 Each function returns an `Svg msg` you drop straight into a page. Numeric axes draw **1·2·5
 gridlines** and tick labels (X and Y); multi-series charts draw a **legend**; every mark carries a
-native `<title>` **hover tooltip** (no Elm state). Line and area series can be **smoothed** into a
-Catmull-Rom curve with `Chart.withCurve True`. The number-crunching — domain→pixel mapping (linear
-or **log**), bounds and ticks, coordinate formatting, slicing a circle, binning a sample, blending
-colours, spline smoothing — lives in separate, fully unit-tested
-[`Scale`](src/Scale.elm), [`Arc`](src/Arc.elm) and [`Curve`](src/Curve.elm) modules.
+native `<title>` **hover tooltip** (no Elm state). Line and area series can be **smoothed**
+(`Chart.withCurve True`) or **stepped** (`Chart.withStep True`); add **reference lines and bands**
+(`Chart.withRefLine` / `Chart.withRefBand`) or a scatter **trend line** (`Chart.withTrend True`).
+The number-crunching — domain→pixel mapping (linear or **log**), bounds and ticks, coordinate
+formatting, slicing a circle, binning a sample, blending colours, spline smoothing, quartiles and
+least-squares fits — lives in separate, fully unit-tested [`Scale`](src/Scale.elm),
+[`Arc`](src/Arc.elm), [`Curve`](src/Curve.elm) and [`Stat`](src/Stat.elm) modules.
 
 ## Theming
 
@@ -68,11 +78,14 @@ Chart.sized 460 260
   `ringPoints` (slices → polygon point-lists). Also pure and tested.
 - **`Curve`** — `smooth` / `catmullRom`: a point list → a smooth spline sampled as points (so a
   plain `<polyline>` renders the curve). Pure and tested.
+- **`Stat`** — `mean` / `median` / `quantile` / `quartiles` / `stdDev` / `linearRegression`: the
+  summary stats behind box plots and trend lines. Pure and tested.
 - **`Chart`** — `bars`, `hbars`, `line`, `area`, `scatter`, `bubble`, `multiLine`, `stackedArea`,
-  `stackedBars`, `groupedBars`, `histogram`, `pie`, `donut`, `radar` over plain Elm data; the
-  `Config` theme constructors (`sized`, `darken`, `withColor`, `withGrid`, `withValues`, `withTitle`,
-  `withAxisTitles`, `withInner`, `withCurve`, `withTips`); and the building blocks (`frame`, `xAxis`,
-  `legend`, `polylineOf`, `dotsOf`) for bespoke charts.
+  `stackedBars`, `groupedBars`, `histogram`, `pie`, `donut`, `radar`, `boxplot`, `candlestick`,
+  `heatmap`, `sparkline` over plain Elm data; the `Config` theme/annotation constructors (`sized`,
+  `darken`, `withColor`, `withGrid`, `withValues`, `withTitle`, `withAxisTitles`, `withInner`,
+  `withCurve`, `withStep`, `withTrend`, `withTips`, `withRefLine`, `withRefBand`); and the building
+  blocks (`frame`, `xAxis`, `legend`, `polylineOf`, `dotsOf`) for bespoke charts.
 
 ## Gotchas it bakes in
 
