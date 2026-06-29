@@ -219,6 +219,7 @@ view size onSize =
             , card "Pareto" "Chart.pareto cfg defects" "Sorted bars with a cumulative-% line on a right axis — the 80/20 view." (Chart.pareto cfg defects)
             , card "Pie chart" "Chart.pie cfg share" "Slices sized by value, summing to the whole." (Chart.pie cfg share)
             , card "Custom palette" "Chart.pie (Chart.withPalette earthy cfg) share" "Bring your own series colours with Chart.withPalette." (Chart.pie (Chart.withPalette [ "#264653", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51" ] cfg) share)
+            , card "Gradient fills" "Chart.bars (Chart.withGradient True cfg) sales" "Vertical gradient fills on bars, areas and slices." (Chart.bars (Chart.withGradient True cfg) sales)
             , card "Donut chart" "Chart.donut (Chart.withInner 0.6 cfg) share" "A pie with a hole — set by Chart.withInner." (Chart.donut (Chart.withInner 0.6 cfg) share)
             , card "Funnel" "Chart.funnel cfg funnelData" "Narrowing stages for a conversion flow; hover for share of the first." (Chart.funnel cfg funnelData)
             , card "Polar area" "Chart.rose cfg winds" "Equal-angle slices with radius by value — a Nightingale rose." (Chart.rose cfg winds)

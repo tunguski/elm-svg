@@ -1,6 +1,6 @@
 module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
-    , withColor, withPalette, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
+    , withColor, withPalette, withGradient, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
     , RefMark, withRefLine, withRefBand, LegendPos(..), withLegend
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
@@ -29,7 +29,7 @@ at the call site.
 # Config
 
 @docs Config, defaults, dark, darken, sized, colored, palette
-@docs withColor, withPalette, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
+@docs withColor, withPalette, withGradient, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
 @docs withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
 @docs RefMark, withRefLine, withRefBand, LegendPos, withLegend
 
@@ -50,6 +50,7 @@ at the call site.
 
 import Arc
 import Curve
+import Html.Attributes as HA
 import Layout
 import Scale exposing (Scale)
 import Stat
@@ -102,6 +103,7 @@ type alias Config =
     , showXLabels : Bool
     , showGrid : Bool
     , showValues : Bool
+    , gradient : Bool
     , curve : Bool
     , step : Bool
     , trend : Bool
@@ -140,6 +142,7 @@ defaults =
     , showXLabels = True
     , showGrid = True
     , showValues = False
+    , gradient = False
     , curve = False
     , step = False
     , trend = False
@@ -203,6 +206,13 @@ colours; an empty list falls back to the built-in [`palette`](#palette). -}
 withPalette : List String -> Config -> Config
 withPalette colors c =
     { c | palette = colors }
+
+
+{-| Fill bars, areas and slices with a vertical **gradient** of their colour (opaque at the top,
+fading toward the baseline) instead of a flat fill. -}
+withGradient : Bool -> Config -> Config
+withGradient on c =
+    { c | gradient = on }
 
 
 {-| Turn horizontal gridlines on (default) or off. -}
@@ -403,7 +413,56 @@ root c children =
         , SA.width (Scale.num c.width)
         , SA.height (Scale.num c.height)
         ]
-        (background c ++ children)
+        (background c ++ gradientDefs c ++ children)
+
+
+{-| A fill value for `colour`: a `url(#…)` gradient reference when the `Config` asks for gradients
+(and the colour has a gradient defined), else the flat colour. -}
+fillC : Config -> String -> String
+fillC c colour =
+    if c.gradient then
+        "url(#" ++ gradId colour ++ ")"
+
+    else
+        colour
+
+
+gradId : String -> String
+gradId colour =
+    "esg" ++ String.filter (\ch -> ch /= '#') colour
+
+
+{-| `<defs>` of one vertical gradient per accent/palette colour, emitted when gradients are on. The
+id is derived from the colour, so identical colours share one definition and never collide. -}
+gradientDefs : Config -> List (Svg msg)
+gradientDefs c =
+    if not c.gradient then
+        []
+
+    else
+        let
+            colours =
+                List.foldl
+                    (\x acc ->
+                        if List.member x acc then
+                            acc
+
+                        else
+                            acc ++ [ x ]
+                    )
+                    []
+                    (c.color :: c.palette)
+
+            grad colour =
+                -- NB: id/offset/stop-color/stop-opacity are not bound as Svg.Attributes in this
+                -- backend, so they go through the generic Html.Attributes.attribute escape hatch.
+                Svg.linearGradient
+                    [ HA.attribute "id" (gradId colour), SA.x1 "0", SA.y1 "0", SA.x2 "0", SA.y2 "1" ]
+                    [ Svg.stop [ HA.attribute "offset" "0", HA.attribute "stop-color" colour, HA.attribute "stop-opacity" "0.95" ] []
+                    , Svg.stop [ HA.attribute "offset" "1", HA.attribute "stop-color" colour, HA.attribute "stop-opacity" "0.3" ] []
+                    ]
+        in
+        [ Svg.defs [] (List.map grad colours) ]
 
 
 background : Config -> List (Svg msg)
@@ -465,7 +524,7 @@ bars c data =
                     , SA.y (Scale.num (Basics.min y zeroY))
                     , SA.width (Scale.num barW)
                     , SA.height (Scale.num (Basics.max 0.5 (abs (zeroY - y))))
-                    , SA.fill c.color
+                    , SA.fill (fillC c c.color)
                     ]
                     (tip c (lbl ++ ": " ++ Scale.num v))
                  , xLabel c count cx lbl
@@ -719,7 +778,7 @@ stackedBars c data =
                         , SA.y (Scale.num yTop)
                         , SA.width (Scale.num barW)
                         , SA.height (Scale.num (Basics.max 0.5 (abs (yBot - yTop))))
-                        , SA.fill (colorAt c j)
+                        , SA.fill (fillC c (colorAt c j))
                         ]
                         (tip c (name ++ ": " ++ Scale.num v))
                    ]
@@ -787,7 +846,7 @@ groupedBars c data =
                 , SA.y (Scale.num (Basics.min y zeroY))
                 , SA.width (Scale.num (subW * 0.8))
                 , SA.height (Scale.num (Basics.max 0.5 (abs (zeroY - y))))
-                , SA.fill (colorAt c j)
+                , SA.fill (fillC c (colorAt c j))
                 ]
                 (tip c (name ++ ": " ++ Scale.num v))
 
@@ -839,7 +898,7 @@ pieDonut c innerFrac data =
             in
             Svg.polyline
                 [ SA.points (Scale.pointsString pts)
-                , SA.fill (colorAt c i)
+                , SA.fill (fillC c (colorAt c i))
                 , SA.stroke c.background
                 , SA.strokeWidth "1"
                 ]
@@ -895,7 +954,7 @@ hbars c data =
                     , SA.y (Scale.num (cy - barH / 2))
                     , SA.width (Scale.num (Basics.max 0.5 (abs (x - zeroX))))
                     , SA.height (Scale.num barH)
-                    , SA.fill c.color
+                    , SA.fill (fillC c c.color)
                     ]
                     (tip c (lbl ++ ": " ++ Scale.num v))
                 , tickLabel c (c.left - 5) (cy + 3) (clip lbl)
@@ -998,7 +1057,7 @@ histogram c values =
                 , SA.y (Scale.num y)
                 , SA.width (Scale.num (Basics.max 0.5 (x1 - x0 - 1)))
                 , SA.height (Scale.num (Basics.max 0 (zeroY - y)))
-                , SA.fill c.color
+                , SA.fill (fillC c c.color)
                 ]
                 (tip c (Scale.num (lo + binW * toFloat i) ++ "–" ++ Scale.num (lo + binW * toFloat (i + 1)) ++ ": " ++ String.fromInt cnt))
     in
@@ -1121,7 +1180,7 @@ streamgraph c serieses =
         bandPoly i ( name, ( lower, upper ) ) =
             Svg.polyline
                 [ SA.points (Scale.pointsString (curved c (toPx upper) ++ List.reverse (curved c (toPx lower))))
-                , SA.fill (colorAt c i)
+                , SA.fill (fillC c (colorAt c i))
                 , SA.fillOpacity "0.85"
                 , SA.stroke c.background
                 , SA.strokeWidth "0.5"
@@ -1287,7 +1346,7 @@ radar c axes serieses =
         poly i ( _, vals ) =
             Svg.polyline
                 [ SA.points (Scale.pointsString (closeLoop (List.indexedMap (\j v -> Arc.pointOnCircle center (radius * (Basics.max 0 v / maxV)) (angleOf j)) vals)))
-                , SA.fill (colorAt c i)
+                , SA.fill (fillC c (colorAt c i))
                 , SA.fillOpacity "0.12"
                 , SA.stroke (colorAt c i)
                 , SA.strokeWidth (Scale.num c.stroke)
@@ -1353,7 +1412,7 @@ boxplot c data =
                 , axisLine c (cx - boxW / 4) yhi (cx + boxW / 4) yhi
                 , axisLine c (cx - boxW / 4) ylo (cx + boxW / 4) ylo
                 , Svg.rect
-                    [ SA.x (Scale.num (cx - boxW / 2)), SA.y (Scale.num (Basics.min yq1 yq3)), SA.width (Scale.num boxW), SA.height (Scale.num (Basics.max 0.5 (abs (yq1 - yq3)))), SA.fill c.color, SA.fillOpacity "0.35", SA.stroke c.color, SA.strokeWidth "1" ]
+                    [ SA.x (Scale.num (cx - boxW / 2)), SA.y (Scale.num (Basics.min yq1 yq3)), SA.width (Scale.num boxW), SA.height (Scale.num (Basics.max 0.5 (abs (yq1 - yq3)))), SA.fill (fillC c c.color), SA.fillOpacity "0.35", SA.stroke c.color, SA.strokeWidth "1" ]
                     (tip c txt)
                 , Svg.line [ SA.x1 (Scale.num (cx - boxW / 2)), SA.y1 (Scale.num yq2), SA.x2 (Scale.num (cx + boxW / 2)), SA.y2 (Scale.num yq2), SA.stroke c.color, SA.strokeWidth "1.5" ] []
                 , xLabel c count cx lbl
@@ -1709,7 +1768,7 @@ percentBars c data =
             ( cum + v
             , acc
                 ++ [ Svg.rect
-                        [ SA.x (Scale.num (cx - barW / 2)), SA.y (Scale.num (Scale.convert yS (cum + v))), SA.width (Scale.num barW), SA.height (Scale.num (Basics.max 0.5 (abs (Scale.convert yS cum - Scale.convert yS (cum + v))))), SA.fill (colorAt c j) ]
+                        [ SA.x (Scale.num (cx - barW / 2)), SA.y (Scale.num (Scale.convert yS (cum + v))), SA.width (Scale.num barW), SA.height (Scale.num (Basics.max 0.5 (abs (Scale.convert yS cum - Scale.convert yS (cum + v))))), SA.fill (fillC c (colorAt c j)) ]
                         (tip c (name ++ ": " ++ Scale.num v ++ "%"))
                    ]
             )
@@ -1840,7 +1899,7 @@ treemap c data =
         cell i ( ( lbl, v ), ( x, y, w, h ) ) =
             Svg.g []
                 [ Svg.rect
-                    [ SA.x (Scale.num x), SA.y (Scale.num y), SA.width (Scale.num w), SA.height (Scale.num h), SA.fill (colorAt c i), SA.stroke border, SA.strokeWidth "1" ]
+                    [ SA.x (Scale.num x), SA.y (Scale.num y), SA.width (Scale.num w), SA.height (Scale.num h), SA.fill (fillC c (colorAt c i)), SA.stroke border, SA.strokeWidth "1" ]
                     (tip c (lbl ++ ": " ++ c.format v))
                 , if w > 34 && h > 14 then
                     Svg.text_
@@ -1891,7 +1950,7 @@ funnel c data =
             in
             Svg.g []
                 [ Svg.rect
-                    [ SA.x (Scale.num (cx - w / 2)), SA.y (Scale.num y), SA.width (Scale.num w), SA.height (Scale.num barH), SA.fill (colorAt c i) ]
+                    [ SA.x (Scale.num (cx - w / 2)), SA.y (Scale.num y), SA.width (Scale.num w), SA.height (Scale.num barH), SA.fill (fillC c (colorAt c i)) ]
                     (tip c (lbl ++ ": " ++ c.format v ++ " (" ++ Scale.num (v / first * 100) ++ "% of first)"))
                 , Svg.text_
                     [ SA.x (Scale.num cx), SA.y (Scale.num (y + barH * 0.64)), SA.fill "#ffffff", SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor "middle" ]
@@ -1944,7 +2003,7 @@ gantt c data =
             in
             Svg.g []
                 [ Svg.rect
-                    [ SA.x (Scale.num (Basics.min x0 x1)), SA.y (Scale.num (cy - barH / 2)), SA.width (Scale.num (Basics.max 1 (abs (x1 - x0)))), SA.height (Scale.num barH), SA.fill (colorAt c i) ]
+                    [ SA.x (Scale.num (Basics.min x0 x1)), SA.y (Scale.num (cy - barH / 2)), SA.width (Scale.num (Basics.max 1 (abs (x1 - x0)))), SA.height (Scale.num barH), SA.fill (fillC c (colorAt c i)) ]
                     (tip c (lbl ++ ": " ++ c.format s ++ "–" ++ c.format e))
                 , tickLabel c (c.left - 5) (cy + 3) (clip lbl)
                 ]
@@ -2036,7 +2095,7 @@ pareto c data =
         bar i ( lbl, v ) =
             Svg.g []
                 [ Svg.rect
-                    [ SA.x (Scale.num (cxOf i - barW / 2)), SA.y (Scale.num (Scale.convert yS v)), SA.width (Scale.num barW), SA.height (Scale.num (Basics.max 0.5 (Scale.convert yS 0 - Scale.convert yS v))), SA.fill c.color ]
+                    [ SA.x (Scale.num (cxOf i - barW / 2)), SA.y (Scale.num (Scale.convert yS v)), SA.width (Scale.num barW), SA.height (Scale.num (Basics.max 0.5 (Scale.convert yS 0 - Scale.convert yS v))), SA.fill (fillC c c.color) ]
                     (tip c (lbl ++ ": " ++ c.format v))
                 , xLabel c count (cxOf i) lbl
                 ]
@@ -2089,7 +2148,7 @@ rose c data =
             in
             Svg.polyline
                 [ SA.points (Scale.pointsString (Arc.wedgePoints center (maxR * (v / maxV)) start (start + step)))
-                , SA.fill (colorAt c i)
+                , SA.fill (fillC c (colorAt c i))
                 , SA.fillOpacity "0.75"
                 , SA.stroke c.background
                 , SA.strokeWidth "1"
@@ -2135,7 +2194,7 @@ radialBars c data =
             in
             Svg.g []
                 [ Svg.polyline [ SA.points (Scale.pointsString (Arc.ringPoints center rInner rOuter 0 sweepMax)), SA.fill c.grid, SA.stroke "none" ] []
-                , Svg.polyline [ SA.points (Scale.pointsString (Arc.ringPoints center rInner rOuter 0 (v / maxV * sweepMax))), SA.fill (colorAt c i), SA.stroke "none" ] (tip c (lbl ++ ": " ++ c.format v))
+                , Svg.polyline [ SA.points (Scale.pointsString (Arc.ringPoints center rInner rOuter 0 (v / maxV * sweepMax))), SA.fill (fillC c (colorAt c i)), SA.stroke "none" ] (tip c (lbl ++ ": " ++ c.format v))
                 ]
     in
     root c (List.indexedMap bar data ++ [ legend c (List.map Tuple.first data) ])
@@ -2178,7 +2237,7 @@ bullet c spec =
     root c
         (List.indexedMap zone pairs
             ++ [ Svg.rect
-                    [ SA.x (Scale.num c.left), SA.y (Scale.num (midY - trackH * 0.18)), SA.width (Scale.num (Basics.max 0.5 (Scale.convert xS spec.value - c.left))), SA.height (Scale.num (trackH * 0.36)), SA.fill c.color ]
+                    [ SA.x (Scale.num c.left), SA.y (Scale.num (midY - trackH * 0.18)), SA.width (Scale.num (Basics.max 0.5 (Scale.convert xS spec.value - c.left))), SA.height (Scale.num (trackH * 0.36)), SA.fill (fillC c c.color) ]
                     (tip c ("value " ++ c.format spec.value ++ " / target " ++ c.format spec.target))
                , Svg.line
                     [ SA.x1 (Scale.num (Scale.convert xS spec.target)), SA.y1 (Scale.num (top_ - 2)), SA.x2 (Scale.num (Scale.convert xS spec.target)), SA.y2 (Scale.num (top_ + trackH + 2)), SA.stroke c.label, SA.strokeWidth "2.5" ]
@@ -2418,7 +2477,7 @@ legend c names =
                         ( xEdge + 13, "start" )
             in
             Svg.g []
-                [ Svg.rect [ SA.x (Scale.num swatchX), SA.y (Scale.num y), SA.width "9", SA.height "9", SA.fill (colorAt c i) ] []
+                [ Svg.rect [ SA.x (Scale.num swatchX), SA.y (Scale.num y), SA.width "9", SA.height "9", SA.fill (fillC c (colorAt c i)) ] []
                 , Svg.text_ [ SA.x (Scale.num textX), SA.y (Scale.num (y + 8)), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor anchor ] [ Svg.text (clip name) ]
                 ]
     in
