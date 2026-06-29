@@ -235,6 +235,7 @@ view size onSize =
             , card "Box plots" "Chart.boxplot cfg samples" "Quartiles, median and whiskers per sample, from the tested Stat module." (Chart.boxplot cfg samples)
             , card "Candlestick" "Chart.candlestick cfg ohlc" "Open/high/low/close — up days green, down days red." (Chart.candlestick cfg ohlc)
             , card "Heatmap" "Chart.heatmap cfg cols rows grid" "A grid shaded along a colour ramp; hover for values." (Chart.heatmap cfg heatCols heatRows heatVals)
+            , card "Custom colour scale" "Chart.heatmap (Chart.withColorScale \"#fff5eb\" \"#d94801\" cfg) …" "Set the sequential ramp for heatmaps, bubbles and bullets." (Chart.heatmap (Chart.withColorScale "#fff5eb" "#d94801" cfg) heatCols heatRows heatVals)
             , card "Treemap" "Chart.treemap cfg teams" "Nested rectangles sized by value, tiled by the Layout module." (Chart.treemap cfg teams)
             , card "Gantt" "Chart.gantt cfg schedule" "Task bars spanning their start–end on a shared time axis." (Chart.gantt cfg schedule)
             , card "Trend line" "Chart.scatter (Chart.withTrend True cfg) cloud" "A least-squares regression line over the points." (Chart.scatter (Chart.withTrend True cfg) cloud)

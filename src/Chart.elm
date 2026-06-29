@@ -1,6 +1,6 @@
 module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
-    , withColor, withPalette, withGradient, withPlotBackground, withBorder
+    , withColor, withPalette, withGradient, withPlotBackground, withBorder, withColorScale
     , withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
     , RefMark, withRefLine, withRefBand, LegendPos(..), withLegend
@@ -30,7 +30,7 @@ at the call site.
 # Config
 
 @docs Config, defaults, dark, darken, sized, colored, palette
-@docs withColor, withPalette, withGradient, withPlotBackground, withBorder
+@docs withColor, withPalette, withGradient, withPlotBackground, withBorder, withColorScale
 @docs withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
 @docs withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
 @docs RefMark, withRefLine, withRefBand, LegendPos, withLegend
@@ -93,6 +93,7 @@ type alias Config =
     , left : Float
     , color : String
     , palette : List String
+    , colorScale : Maybe ( String, String )
     , axis : String
     , label : String
     , grid : String
@@ -134,6 +135,7 @@ defaults =
     , left = 40
     , color = "#5b6ef5"
     , palette = palette
+    , colorScale = Nothing
     , axis = "#9aa7bd"
     , label = "#61708a"
     , grid = "#e7ecf4"
@@ -232,6 +234,24 @@ withPlotBackground colour c =
 withBorder : String -> Config -> Config
 withBorder colour c =
     { c | border = colour }
+
+
+{-| Set the sequential **colour scale** (`from` low values, `to` high) used to shade a
+[`heatmap`](#heatmap), [`bubble`](#bubble) and [`bullet`](#bullet). Each has its own sensible
+default when this is unset. -}
+withColorScale : String -> String -> Config -> Config
+withColorScale from to c =
+    { c | colorScale = Just ( from, to ) }
+
+
+{-| Interpolate the configured colour scale at `t`, falling back to the given default endpoints. -}
+ramp : Config -> String -> String -> Float -> String
+ramp c fromDefault toDefault t =
+    let
+        ( from, to ) =
+            Maybe.withDefault ( fromDefault, toDefault ) c.colorScale
+    in
+    Scale.interpolateColor from to t
 
 
 {-| Turn horizontal gridlines on (default) or off. -}
@@ -1028,7 +1048,7 @@ bubble c data =
                 [ SA.cx (Scale.num (Scale.convert xS x))
                 , SA.cy (Scale.num (Scale.convert yS y))
                 , SA.r (Scale.num (sqrt t * maxR))
-                , SA.fill (Scale.interpolateColor (colorAt c 0) (colorAt c 1) t)
+                , SA.fill (ramp c (colorAt c 0) (colorAt c 1) t)
                 , SA.fillOpacity "0.65"
                 ]
                 (tip c ("(" ++ Scale.num x ++ ", " ++ Scale.num y ++ ") · " ++ Scale.num s))
@@ -1522,7 +1542,7 @@ heatmap c cols rows values =
                 , SA.y (Scale.num (c.top + cellH * toFloat i))
                 , SA.width (Scale.num (cellW + 0.5))
                 , SA.height (Scale.num (cellH + 0.5))
-                , SA.fill (Scale.interpolateColor c.grid c.color ((v - lo) / span))
+                , SA.fill (ramp c c.grid c.color ((v - lo) / span))
                 ]
                 (tip c (itemAt i rows ++ " / " ++ itemAt j cols ++ ": " ++ Scale.num v))
 
@@ -2250,7 +2270,7 @@ bullet c spec =
 
         zone i ( lo, hi ) =
             Svg.rect
-                [ SA.x (Scale.num (Scale.convert xS lo)), SA.y (Scale.num top_), SA.width (Scale.num (Basics.max 0.5 (Scale.convert xS hi - Scale.convert xS lo))), SA.height (Scale.num trackH), SA.fill (Scale.interpolateColor c.grid c.axis (toFloat i / toFloat nz)) ]
+                [ SA.x (Scale.num (Scale.convert xS lo)), SA.y (Scale.num top_), SA.width (Scale.num (Basics.max 0.5 (Scale.convert xS hi - Scale.convert xS lo))), SA.height (Scale.num trackH), SA.fill (ramp c c.grid c.axis (toFloat i / toFloat nz)) ]
                 []
     in
     root c
