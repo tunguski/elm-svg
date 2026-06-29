@@ -2,6 +2,7 @@ module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
     , withColor, withPalette, withGradient, withPlotBackground, withBorder, withColorScale
     , withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
+    , withFont, withDots, withStroke
     , withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
     , RefMark, withRefLine, withRefBand, LegendPos(..), withLegend
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
@@ -32,6 +33,7 @@ at the call site.
 @docs Config, defaults, dark, darken, sized, colored, palette
 @docs withColor, withPalette, withGradient, withPlotBackground, withBorder, withColorScale
 @docs withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
+@docs withFont, withDots, withStroke
 @docs withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
 @docs RefMark, withRefLine, withRefBand, LegendPos, withLegend
 
@@ -294,6 +296,24 @@ withCurve on c =
 withTips : Bool -> Config -> Config
 withTips on c =
     { c | showTips = on }
+
+
+{-| Set the label font family and size used throughout the chart. -}
+withFont : String -> Float -> Config -> Config
+withFont family size c =
+    { c | font = family, fontSize = size }
+
+
+{-| Set the radius of point markers (scatter, line/area dots, bubbles' base). -}
+withDots : Float -> Config -> Config
+withDots r c =
+    { c | dotR = r }
+
+
+{-| Set the line stroke width (line, area, multi-line, trend, bump, …). -}
+withStroke : Float -> Config -> Config
+withStroke w c =
+    { c | stroke = w }
 
 
 {-| Draw line/area series as a step (stair) instead of straight segments — good for values that

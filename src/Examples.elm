@@ -232,6 +232,7 @@ view size onSize =
             , card "Radar chart" "Chart.radar cfg axes squads" "Several series compared across shared axes." (Chart.radar cfg radarAxes squads)
             , card "Smooth line" "Chart.line (Chart.withCurve True cfg) temps" "The same line, smoothed with a Catmull-Rom curve." (Chart.line (Chart.withCurve True cfg) temps)
             , card "Stepped line" "Chart.line (Chart.withStep True cfg) temps" "A stair step — for values that hold then jump." (Chart.line (Chart.withStep True cfg) temps)
+            , card "Mark styling" "Chart.withFont \"Georgia, serif\" 11 · withStroke 3.5 · withDots 5" "Tune typography, line weight and marker size." (Chart.line (Chart.withStroke 3.5 (Chart.withDots 5 (Chart.withFont "Georgia, serif" 11 cfg))) temps)
             , card "Box plots" "Chart.boxplot cfg samples" "Quartiles, median and whiskers per sample, from the tested Stat module." (Chart.boxplot cfg samples)
             , card "Candlestick" "Chart.candlestick cfg ohlc" "Open/high/low/close — up days green, down days red." (Chart.candlestick cfg ohlc)
             , card "Heatmap" "Chart.heatmap cfg cols rows grid" "A grid shaded along a colour ramp; hover for values." (Chart.heatmap cfg heatCols heatRows heatVals)
