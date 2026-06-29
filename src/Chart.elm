@@ -5,7 +5,7 @@ module Chart exposing
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope
     , area, stackedArea, stackedBars, groupedBars, percentBars
     , histogram, pie, donut, radar, funnel
-    , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap
+    , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt
     , frame, xAxis, polylineOf, dotsOf, legend
     )
 
@@ -37,7 +37,7 @@ at the call site.
 @docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope
 @docs area, stackedArea, stackedBars, groupedBars, percentBars
 @docs histogram, pie, donut, radar, funnel
-@docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap
+@docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt
 
 
 # Building blocks
@@ -1608,6 +1608,57 @@ funnel c data =
                 ]
     in
     root c (List.indexedMap stage data)
+
+
+{-| A Gantt chart of `(label, start, end)` tasks: a horizontal bar per task spanning its interval on
+a shared time axis, with the task labels down the left. -}
+gantt : Config -> List ( String, Float, Float ) -> Svg msg
+gantt c data =
+    let
+        lo =
+            List.minimum (List.map (\( _, s, _ ) -> s) data) |> Maybe.withDefault 0
+
+        hi =
+            List.maximum (List.map (\( _, _, e ) -> e) data) |> Maybe.withDefault 1
+
+        xS =
+            Scale.linear
+                (if lo == hi then
+                    ( lo, lo + 1 )
+
+                 else
+                    ( lo, hi )
+                )
+                ( c.left, c.left + plotW c )
+
+        count =
+            List.length data
+
+        slot =
+            plotH c / toFloat (Basics.max 1 count)
+
+        barH =
+            slot * 0.6
+
+        bar i ( lbl, s, e ) =
+            let
+                cy =
+                    c.top + slot * (toFloat i + 0.5)
+
+                x0 =
+                    Scale.convert xS s
+
+                x1 =
+                    Scale.convert xS e
+            in
+            Svg.g []
+                [ Svg.rect
+                    [ SA.x (Scale.num (Basics.min x0 x1)), SA.y (Scale.num (cy - barH / 2)), SA.width (Scale.num (Basics.max 1 (abs (x1 - x0)))), SA.height (Scale.num barH), SA.fill (colorAt i) ]
+                    (tip c (lbl ++ ": " ++ c.format s ++ "–" ++ c.format e))
+                , tickLabel c (c.left - 5) (cy + 3) (clip lbl)
+                ]
+    in
+    root c (xAxis c xS ++ [ axisLine c c.left c.top c.left (c.top + plotH c) ] ++ List.indexedMap bar data)
 
 
 

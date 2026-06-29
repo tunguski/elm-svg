@@ -155,6 +155,11 @@ funnelData =
     [ ( "Visits", 1000 ), ( "Signups", 620 ), ( "Trials", 380 ), ( "Paid", 145 ), ( "Renewed", 98 ) ]
 
 
+schedule : List ( String, Float, Float )
+schedule =
+    [ ( "Design", 0, 3 ), ( "Build", 2, 7 ), ( "Test", 6, 9 ), ( "Docs", 8, 10 ), ( "Launch", 10, 11 ) ]
+
+
 {-| The gallery, at the given size, with size buttons that send `onSize`. -}
 view : Float -> (Float -> msg) -> Html msg
 view size onSize =
@@ -192,6 +197,7 @@ view size onSize =
             , card "Candlestick" "Chart.candlestick cfg ohlc" "Open/high/low/close — up days green, down days red." (Chart.candlestick cfg ohlc)
             , card "Heatmap" "Chart.heatmap cfg cols rows grid" "A grid shaded along a colour ramp; hover for values." (Chart.heatmap cfg heatCols heatRows heatVals)
             , card "Treemap" "Chart.treemap cfg teams" "Nested rectangles sized by value, tiled by the Layout module." (Chart.treemap cfg teams)
+            , card "Gantt" "Chart.gantt cfg schedule" "Task bars spanning their start–end on a shared time axis." (Chart.gantt cfg schedule)
             , card "Trend line" "Chart.scatter (Chart.withTrend True cfg) cloud" "A least-squares regression line over the points." (Chart.scatter (Chart.withTrend True cfg) cloud)
             , card "Error bars" "Chart.scatterErr cfg measured" "Points with a vertical y ± error whisker each." (Chart.scatterErr cfg measured)
             , card "Reference marks" "Chart.bars (Chart.withRefLine 160 \"goal\" …) sales" "A target line and a tolerance band behind the data." (Chart.bars (Chart.withRefLine 160 "goal" (Chart.withRefBand 150 175 "ok" cfg)) sales)
