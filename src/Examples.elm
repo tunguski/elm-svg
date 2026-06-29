@@ -221,6 +221,7 @@ view size onSize =
             , card "Sparkline" "Chart.sparkline (Chart.sized 220 52) trail" "A tiny, axis-less line for inline use." (Chart.sparkline (Chart.sized 220 52) trail)
             , card "Waterfall" "Chart.waterfall cfg cashflow" "Floating bars bridge a start value to an end through up/down contributions." (Chart.waterfall cfg cashflow)
             , card "Gauge" "Chart.gauge cfg 0 100 72" "A single headline value as a dial — for KPIs on a dashboard." (Chart.gauge cfg 0 100 72)
+            , card "Bullet" "Chart.bullet cfg { value = 72, target = 85, … }" "A compact KPI: measure bar over qualitative bands with a target tick." (Chart.bullet cfg { value = 72, target = 85, max = 100, bands = [ 50, 75 ] })
             , card "Lollipop" "Chart.lollipop cfg sales" "Stems topped with dots — a lighter alternative to bars." (Chart.lollipop cfg sales)
             , card "Slope chart" "Chart.slope cfg \"2019\" \"2024\" ranks" "Value or rank changes between two periods — green up, red down." (Chart.slope cfg "2019" "2024" ranks)
             , card "Dumbbell" "Chart.dumbbell cfg ranges" "A low–high range per category, as two connected dots." (Chart.dumbbell cfg ranges)

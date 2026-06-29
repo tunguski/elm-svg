@@ -5,7 +5,7 @@ module Chart exposing
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
     , area, stackedArea, stackedBars, groupedBars, percentBars, pareto
     , histogram, pie, donut, radar, funnel, rose
-    , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt
+    , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
     , frame, xAxis, polylineOf, dotsOf, legend
     )
 
@@ -37,7 +37,7 @@ at the call site.
 @docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
 @docs area, stackedArea, stackedBars, groupedBars, percentBars, pareto
 @docs histogram, pie, donut, radar, funnel, rose
-@docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt
+@docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
 
 
 # Building blocks
@@ -1806,6 +1806,57 @@ rose c data =
                 (tip c (lbl ++ ": " ++ c.format v))
     in
     root c (List.indexedMap slice data ++ [ legend c (List.map Tuple.first data) ])
+
+
+{-| A bullet chart (Stephen Few's compact KPI): a measure bar for `value` over qualitative `bands`
+(ascending thresholds within `0…max`, shaded grid→axis), with a tick marking the `target`. -}
+bullet : Config -> { value : Float, target : Float, max : Float, bands : List Float } -> Svg msg
+bullet c spec =
+    let
+        maxV =
+            Basics.max 1.0e-9 spec.max
+
+        xS =
+            Scale.linear ( 0, maxV ) ( c.left, c.left + plotW c )
+
+        midY =
+            c.top + plotH c / 2
+
+        trackH =
+            plotH c * 0.5
+
+        top_ =
+            midY - trackH / 2
+
+        edges =
+            0 :: (spec.bands ++ [ maxV ])
+
+        pairs =
+            List.map2 Tuple.pair edges (List.drop 1 edges)
+
+        nz =
+            Basics.max 1 (List.length pairs - 1)
+
+        zone i ( lo, hi ) =
+            Svg.rect
+                [ SA.x (Scale.num (Scale.convert xS lo)), SA.y (Scale.num top_), SA.width (Scale.num (Basics.max 0.5 (Scale.convert xS hi - Scale.convert xS lo))), SA.height (Scale.num trackH), SA.fill (Scale.interpolateColor c.grid c.axis (toFloat i / toFloat nz)) ]
+                []
+    in
+    root c
+        (List.indexedMap zone pairs
+            ++ [ Svg.rect
+                    [ SA.x (Scale.num c.left), SA.y (Scale.num (midY - trackH * 0.18)), SA.width (Scale.num (Basics.max 0.5 (Scale.convert xS spec.value - c.left))), SA.height (Scale.num (trackH * 0.36)), SA.fill c.color ]
+                    (tip c ("value " ++ c.format spec.value ++ " / target " ++ c.format spec.target))
+               , Svg.line
+                    [ SA.x1 (Scale.num (Scale.convert xS spec.target)), SA.y1 (Scale.num (top_ - 2)), SA.x2 (Scale.num (Scale.convert xS spec.target)), SA.y2 (Scale.num (top_ + trackH + 2)), SA.stroke c.label, SA.strokeWidth "2.5" ]
+                    []
+               , Svg.text_
+                    [ SA.x (Scale.num (Scale.convert xS spec.value + 4)), SA.y (Scale.num (midY + 3)), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor "start" ]
+                    [ Svg.text (c.format spec.value) ]
+               , valueLabel c c.left (top_ + trackH + 13) (c.format 0)
+               , valueLabel c (c.left + plotW c) (top_ + trackH + 13) (c.format maxV)
+               ]
+        )
 
 
 
