@@ -2,7 +2,7 @@ module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
     , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
-    , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
+    , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid
     , area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
     , histogram, density, pie, donut, radar, funnel, rose
     , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
@@ -34,7 +34,7 @@ at the call site.
 
 # Charts
 
-@docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
+@docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid
 @docs area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
 @docs histogram, density, pie, donut, radar, funnel, rose
 @docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
@@ -1066,6 +1066,58 @@ streamgraph c serieses =
                 (tip c name)
     in
     root c (List.indexedMap bandPoly (List.map2 Tuple.pair names bands) ++ [ legend c names ])
+
+
+{-| A population pyramid: back-to-back horizontal bars per category `(label, left, right)`, the two
+sides (`leftName` / `rightName`) sharing one scale, with category labels down the centre. -}
+pyramid : Config -> String -> String -> List ( String, Float, Float ) -> Svg msg
+pyramid c leftName rightName data =
+    let
+        maxV =
+            Basics.max 1.0e-9 (List.maximum (List.concatMap (\( _, l, r ) -> [ l, r ]) data) |> Maybe.withDefault 1)
+
+        count =
+            List.length data
+
+        slot =
+            plotH c / toFloat (Basics.max 1 count)
+
+        barH =
+            slot * 0.7
+
+        gap =
+            46
+
+        midX =
+            c.left + plotW c / 2
+
+        halfW =
+            (plotW c - gap) / 2
+
+        leftEdge =
+            midX - gap / 2
+
+        rightEdge =
+            midX + gap / 2
+
+        row i ( lbl, l, r ) =
+            let
+                cy =
+                    c.top + slot * (toFloat i + 0.5)
+
+                ll =
+                    l / maxV * halfW
+
+                rl =
+                    r / maxV * halfW
+            in
+            Svg.g []
+                [ Svg.rect [ SA.x (Scale.num (leftEdge - ll)), SA.y (Scale.num (cy - barH / 2)), SA.width (Scale.num (Basics.max 0.5 ll)), SA.height (Scale.num barH), SA.fill (colorAt 0) ] (tip c (leftName ++ " " ++ lbl ++ ": " ++ c.format l))
+                , Svg.rect [ SA.x (Scale.num rightEdge), SA.y (Scale.num (cy - barH / 2)), SA.width (Scale.num (Basics.max 0.5 rl)), SA.height (Scale.num barH), SA.fill (colorAt 1) ] (tip c (rightName ++ " " ++ lbl ++ ": " ++ c.format r))
+                , Svg.text_ [ SA.x (Scale.num midX), SA.y (Scale.num (cy + 3)), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor "middle" ] [ Svg.text (clip lbl) ]
+                ]
+    in
+    root c (List.indexedMap row data ++ [ legend c [ leftName, rightName ] ])
 
 
 {-| A radar (spider) chart: `axes` names the spokes and each series is `(name, values)` with one

@@ -175,6 +175,11 @@ winds =
     [ ( "N", 8 ), ( "NE", 5 ), ( "E", 3 ), ( "SE", 6 ), ( "S", 9 ), ( "SW", 7 ), ( "W", 4 ), ( "NW", 6 ) ]
 
 
+ages : List ( String, Float, Float )
+ages =
+    [ ( "0–19", 22, 21 ), ( "20–39", 28, 27 ), ( "40–59", 26, 27 ), ( "60–79", 17, 19 ), ( "80+", 5, 8 ) ]
+
+
 {-| The gallery, at the given size, with size buttons that send `onSize`. -}
 view : Float -> (Float -> msg) -> Html msg
 view size onSize =
@@ -227,6 +232,7 @@ view size onSize =
             , card "Lollipop" "Chart.lollipop cfg sales" "Stems topped with dots — a lighter alternative to bars." (Chart.lollipop cfg sales)
             , card "Slope chart" "Chart.slope cfg \"2019\" \"2024\" ranks" "Value or rank changes between two periods — green up, red down." (Chart.slope cfg "2019" "2024" ranks)
             , card "Dumbbell" "Chart.dumbbell cfg ranges" "A low–high range per category, as two connected dots." (Chart.dumbbell cfg ranges)
+            , card "Population pyramid" "Chart.pyramid cfg \"Male\" \"Female\" ages" "Back-to-back bars comparing two groups across categories." (Chart.pyramid cfg "Male" "Female" ages)
             , card "Formatted axis" "Chart.withFormat (Format.prefixed \"$\" …)" "Number formatting on ticks and value labels — money, percent, compact k/M." (Chart.bars (Chart.withFormat (Format.prefixed "$" (Format.decimals 0)) (Chart.withValues True cfg)) sales)
             , card "Titled & dark" "Chart.bars (Chart.withTitle \"Sales\" …) sales" "Chart and axis titles, on the dark theme — Chart.darken keeps the slider size." (Chart.bars (Chart.withTitle "Sales" (Chart.withAxisTitles "month" "" (Chart.darken cfg))) sales)
             ]
