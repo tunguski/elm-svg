@@ -2,7 +2,7 @@ module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
     , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
-    , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope
+    , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
     , area, stackedArea, stackedBars, groupedBars, percentBars
     , histogram, pie, donut, radar, funnel
     , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt
@@ -34,7 +34,7 @@ at the call site.
 
 # Charts
 
-@docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope
+@docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
 @docs area, stackedArea, stackedBars, groupedBars, percentBars
 @docs histogram, pie, donut, radar, funnel
 @docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt
@@ -1659,6 +1659,49 @@ gantt c data =
                 ]
     in
     root c (xAxis c xS ++ [ axisLine c c.left c.top c.left (c.top + plotH c) ] ++ List.indexedMap bar data)
+
+
+{-| A dumbbell (range) chart of `(label, low, high)` rows: a connecting bar between a low dot and a
+high dot per category, with a low/high legend. Good for comparing two values or showing a range. -}
+dumbbell : Config -> List ( String, Float, Float ) -> Svg msg
+dumbbell c data =
+    let
+        ( lo, hi ) =
+            Scale.niceBoundsRounded 5 (Scale.niceBounds (List.concatMap (\( _, l, h ) -> [ l, h ]) data))
+
+        xS =
+            Scale.linear ( lo, hi ) ( c.left, c.left + plotW c )
+
+        count =
+            List.length data
+
+        slot =
+            plotH c / toFloat (Basics.max 1 count)
+
+        row i ( lbl, low, high ) =
+            let
+                cy =
+                    c.top + slot * (toFloat i + 0.5)
+
+                xl =
+                    Scale.convert xS low
+
+                xh =
+                    Scale.convert xS high
+            in
+            Svg.g []
+                [ Svg.line [ SA.x1 (Scale.num xl), SA.y1 (Scale.num cy), SA.x2 (Scale.num xh), SA.y2 (Scale.num cy), SA.stroke c.axis, SA.strokeWidth "2" ] []
+                , dot c (colorAt 0) (c.dotR * 1.6) ( xl, cy ) (lbl ++ " low: " ++ c.format low)
+                , dot c (colorAt 1) (c.dotR * 1.6) ( xh, cy ) (lbl ++ " high: " ++ c.format high)
+                , tickLabel c (c.left - 5) (cy + 3) (clip lbl)
+                ]
+    in
+    root c
+        (xAxis c xS
+            ++ [ axisLine c c.left c.top c.left (c.top + plotH c) ]
+            ++ List.indexedMap row data
+            ++ [ legend c [ "low", "high" ] ]
+        )
 
 
 
