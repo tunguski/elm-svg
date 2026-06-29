@@ -2,7 +2,7 @@ module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
     , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
-    , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid
+    , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
     , area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
     , histogram, density, pie, donut, radar, funnel, rose
     , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
@@ -34,7 +34,7 @@ at the call site.
 
 # Charts
 
-@docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid
+@docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
 @docs area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
 @docs histogram, density, pie, donut, radar, funnel, rose
 @docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
@@ -1118,6 +1118,56 @@ pyramid c leftName rightName data =
                 ]
     in
     root c (List.indexedMap row data ++ [ legend c [ leftName, rightName ] ])
+
+
+{-| A bump chart: each series is `(name, values)` with one value per period, and the chart plots its
+**rank** (1 = highest) at each period, connecting the ranks with lines. Shows how an ordering shifts
+over time. -}
+bump : Config -> List ( String, List Float ) -> Svg msg
+bump c serieses =
+    let
+        names =
+            List.map Tuple.first serieses
+
+        seriesVals =
+            List.map Tuple.second serieses
+
+        nSeries =
+            List.length serieses
+
+        periods =
+            List.minimum (List.map List.length seriesVals) |> Maybe.withDefault 0
+
+        valueAt j vals =
+            List.head (List.drop j vals) |> Maybe.withDefault 0
+
+        rankOf si j =
+            let
+                ranked =
+                    List.sortBy (\( _, v ) -> -v) (List.indexedMap (\k sv -> ( k, valueAt j sv )) seriesVals)
+            in
+            1 + (List.indexedMap (\pos ( k, _ ) -> ( pos, k )) ranked |> List.filter (\( _, k ) -> k == si) |> List.head |> Maybe.map Tuple.first |> Maybe.withDefault 0)
+
+        xS =
+            Scale.linear ( 0, toFloat (Basics.max 1 (periods - 1)) ) ( c.left, c.left + plotW c )
+
+        yS =
+            Scale.linear ( 1, toFloat (Basics.max 1 nSeries) ) ( c.top, c.top + plotH c )
+
+        seriesLine si name =
+            let
+                pts =
+                    List.map (\j -> ( Scale.convert xS (toFloat j), Scale.convert yS (toFloat (rankOf si j)) )) (List.range 0 (periods - 1))
+            in
+            strokeLine c (colorAt si) pts :: List.map (\p -> dot c (colorAt si) (c.dotR * 1.5) p name) pts
+
+        periodLabels =
+            List.map (\j -> valueLabel c (Scale.convert xS (toFloat j)) (c.top + plotH c + 13) (String.fromInt (j + 1))) (List.range 0 (periods - 1))
+
+        rankLabels =
+            List.map (\rk -> tickLabel c (c.left - 5) (Scale.convert yS (toFloat rk) + 3) ("#" ++ String.fromInt rk)) (List.range 1 nSeries)
+    in
+    root c (rankLabels ++ periodLabels ++ List.concat (List.indexedMap seriesLine names) ++ [ legend c names ])
 
 
 {-| A radar (spider) chart: `axes` names the spokes and each series is `(name, values)` with one

@@ -180,6 +180,15 @@ ages =
     [ ( "0–19", 22, 21 ), ( "20–39", 28, 27 ), ( "40–59", 26, 27 ), ( "60–79", 17, 19 ), ( "80+", 5, 8 ) ]
 
 
+league : List ( String, List Float )
+league =
+    [ ( "Lions", [ 10, 14, 12, 18, 22 ] )
+    , ( "Bears", [ 12, 11, 15, 14, 16 ] )
+    , ( "Hawks", [ 8, 13, 17, 16, 20 ] )
+    , ( "Wolves", [ 14, 10, 9, 12, 13 ] )
+    ]
+
+
 {-| The gallery, at the given size, with size buttons that send `onSize`. -}
 view : Float -> (Float -> msg) -> Html msg
 view size onSize =
@@ -200,6 +209,7 @@ view size onSize =
             , card "Area chart" "Chart.area (Chart.withColor \"#0f9d58\" cfg) sales" "A line with the region down to the baseline filled." (Chart.area (Chart.withColor "#0f9d58" cfg) sales)
             , card "Scatter plot" "Chart.scatter cfg cloud" "Raw (x, y) points, each axis scaled to its own data." (Chart.scatter cfg cloud)
             , card "Multi-series" "Chart.multiLine cfg waves" "Several named series, each in a palette colour, with a legend." (Chart.multiLine cfg waves)
+            , card "Bump chart" "Chart.bump cfg league" "Each series' rank per period, connected — how an ordering shifts over time." (Chart.bump cfg league)
             , card "Stacked area" "Chart.stackedArea cfg bands" "Named series stacked into translucent filled bands." (Chart.stackedArea cfg bands)
             , card "Streamgraph" "Chart.streamgraph cfg bands" "The same series flowing around a centred baseline." (Chart.streamgraph cfg bands)
             , card "Stacked bars" "Chart.stackedBars cfg revenue" "Each category split into stacked, colour-keyed segments." (Chart.stackedBars cfg revenue)
