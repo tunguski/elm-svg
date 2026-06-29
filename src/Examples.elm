@@ -1,21 +1,17 @@
-module Examples exposing (view)
+module Examples exposing (grid)
 
-{-| The elm-svg **showcase** — a gallery of live charts drawn by the library (bar, line, scatter,
-multi-series), each with the one line of code that produced it. A size control scales every chart
-at once, to show the charts are resolution-independent (drawn with a `viewBox`).
+{-| The elm-svg **charts** showcase — a gallery of live charts drawn by the library, each with the
+one line of code that produced it. The host ([`Gallery`](Gallery)) wraps this in a tabbed page; here
+we only render the grid of chart cards at a given size.
 
-This is the site's "Examples" landing; the host wires the size state and a "Workspace" link around
-it. It is parameterised by the current `size` and the message that sets it, so it stays a pure view.
-
-@docs view
+@docs grid
 
 -}
 
 import Chart
 import Format
-import Html exposing (Html, code, div, h3, p, pre, section, span, text)
+import Html exposing (Html, code, div, h3, p, pre, section, text)
 import Html.Attributes as HA
-import Html.Events as HE
 
 
 sales : List ( String, Float )
@@ -189,21 +185,14 @@ league =
     ]
 
 
-{-| The gallery, at the given size, with size buttons that send `onSize`. -}
-view : Float -> (Float -> msg) -> Html msg
-view size onSize =
+{-| The grid of chart cards, drawn at the given size. -}
+grid : Float -> Html msg
+grid size =
     let
         cfg =
             Chart.sized size (size * 0.55)
     in
-    section [ HA.class "es-examples" ]
-        [ div [ HA.class "es-sizer" ]
-            [ span [] [ text "Scale all charts:" ]
-            , sizeButton onSize size 300 "S"
-            , sizeButton onSize size 380 "M"
-            , sizeButton onSize size 460 "L"
-            ]
-        , section [ HA.class "es-grid" ]
+    section [ HA.class "es-grid" ]
             [ card "Bar chart" "Chart.bars (Chart.withValues True cfg) sales" "Categorical values over gridlines, labelled per bar; a zero baseline is always shown." (Chart.bars (Chart.withValues True cfg) sales)
             , card "Line chart" "Chart.line cfg temps" "A value per category, with markers. Negative values dip below the baseline." (Chart.line cfg temps)
             , card "Area chart" "Chart.area (Chart.withColor \"#0f9d58\" cfg) sales" "A line with the region down to the baseline filled." (Chart.area (Chart.withColor "#0f9d58" cfg) sales)
@@ -256,24 +245,6 @@ view size onSize =
             , card "Pinned axis" "Chart.line (Chart.withYDomain -10 15 cfg) temps" "A fixed Y domain and tick count, instead of fitting to the data." (Chart.line (Chart.withYTicks 5 (Chart.withYDomain -10 15 cfg)) temps)
             , card "Titled & dark" "Chart.bars (Chart.withTitle \"Sales\" …) sales" "Chart and axis titles, on the dark theme — Chart.darken keeps the slider size." (Chart.bars (Chart.withTitle "Sales" (Chart.withAxisTitles "month" "" (Chart.darken cfg))) sales)
             ]
-        ]
-
-
-sizeButton : (Float -> msg) -> Float -> Float -> String -> Html msg
-sizeButton onSize current s label =
-    Html.button
-        [ HA.class
-            ("es-size"
-                ++ (if current == s then
-                        " es-size-on"
-
-                    else
-                        ""
-                   )
-            )
-        , HE.onClick (onSize s)
-        ]
-        [ text label ]
 
 
 card : String -> String -> String -> Html msg -> Html msg
