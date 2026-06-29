@@ -3,7 +3,7 @@ module Chart exposing
     , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
-    , area, stackedArea, stackedBars, groupedBars, percentBars, pareto
+    , area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
     , histogram, density, pie, donut, radar, funnel, rose
     , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
     , frame, xAxis, polylineOf, dotsOf, legend
@@ -35,7 +35,7 @@ at the call site.
 # Charts
 
 @docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
-@docs area, stackedArea, stackedBars, groupedBars, percentBars, pareto
+@docs area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
 @docs histogram, density, pie, donut, radar, funnel, rose
 @docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
 
@@ -999,6 +999,73 @@ density c sample =
             List.map2 (\gx d -> ( Scale.convert xS gx, Scale.convert yS d )) grid densities
     in
     root c (frame c yS ++ xAxis c xS ++ [ areaBand c.color (Scale.convert yS 0) pts, strokeLine c c.color pts ])
+
+
+{-| A streamgraph: like [`stackedArea`](#stackedArea) but the stack flows around a centred baseline
+(each x's total is split above and below the middle), giving the organic "theme river" look. Same
+`(name, [(x, y)])` series; `withCurve` smooths the streams. -}
+streamgraph : Config -> List ( String, List ( Float, Float ) ) -> Svg msg
+streamgraph c serieses =
+    let
+        names =
+            List.map Tuple.first serieses
+
+        xs =
+            case serieses of
+                ( _, pts ) :: _ ->
+                    List.map Tuple.first pts
+
+                [] ->
+                    []
+
+        seriesYs =
+            List.map (\( _, pts ) -> List.map Tuple.second pts) serieses
+
+        totals =
+            List.foldl (List.map2 (+)) (List.map (\_ -> 0) xs) seriesYs
+
+        startLower =
+            List.map (\t -> -t / 2) totals
+
+        stepBand ys ( lower, acc ) =
+            let
+                upper =
+                    List.map2 (+) lower ys
+            in
+            ( upper, acc ++ [ ( lower, upper ) ] )
+
+        ( _, bands ) =
+            List.foldl stepBand ( startLower, [] ) seriesYs
+
+        boundaryVals =
+            startLower ++ List.concatMap (\( l, u ) -> l ++ u) bands
+
+        ( a, b ) =
+            Scale.niceBoundsRounded 5 ( List.minimum boundaryVals |> Maybe.withDefault 0, List.maximum boundaryVals |> Maybe.withDefault 1 )
+
+        ( xlo, xhi ) =
+            Scale.niceBoundsRounded 5 (Scale.niceBounds xs)
+
+        xS =
+            Scale.linear ( xlo, xhi ) ( c.left, c.left + plotW c )
+
+        yS =
+            Scale.linear ( a, b ) ( c.top + plotH c, c.top )
+
+        toPx vals =
+            List.map2 (\x y -> ( Scale.convert xS x, Scale.convert yS y )) xs vals
+
+        bandPoly i ( name, ( lower, upper ) ) =
+            Svg.polyline
+                [ SA.points (Scale.pointsString (curved c (toPx upper) ++ List.reverse (curved c (toPx lower))))
+                , SA.fill (colorAt i)
+                , SA.fillOpacity "0.85"
+                , SA.stroke c.background
+                , SA.strokeWidth "0.5"
+                ]
+                (tip c name)
+    in
+    root c (List.indexedMap bandPoly (List.map2 Tuple.pair names bands) ++ [ legend c names ])
 
 
 {-| A radar (spider) chart: `axes` names the spokes and each series is `(name, values)` with one

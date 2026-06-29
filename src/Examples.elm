@@ -196,6 +196,7 @@ view size onSize =
             , card "Scatter plot" "Chart.scatter cfg cloud" "Raw (x, y) points, each axis scaled to its own data." (Chart.scatter cfg cloud)
             , card "Multi-series" "Chart.multiLine cfg waves" "Several named series, each in a palette colour, with a legend." (Chart.multiLine cfg waves)
             , card "Stacked area" "Chart.stackedArea cfg bands" "Named series stacked into translucent filled bands." (Chart.stackedArea cfg bands)
+            , card "Streamgraph" "Chart.streamgraph cfg bands" "The same series flowing around a centred baseline." (Chart.streamgraph cfg bands)
             , card "Stacked bars" "Chart.stackedBars cfg revenue" "Each category split into stacked, colour-keyed segments." (Chart.stackedBars cfg revenue)
             , card "Grouped bars" "Chart.groupedBars cfg revenue" "The same data as side-by-side bars per category." (Chart.groupedBars cfg revenue)
             , card "100% stacked" "Chart.percentBars cfg revenue" "Each category normalised to 100% — compares composition, not totals." (Chart.percentBars cfg revenue)
