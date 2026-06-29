@@ -93,6 +93,29 @@ Chart.sized 460 260
     |> Chart.withGrid False               -- hide the gridlines
 ```
 
+### Styling
+
+Colours, fills and the legend are all configurable:
+
+```elm
+cfg
+    |> Chart.withPalette [ "#264653", "#2a9d8f", "#e9c46a", "#f4a261" ]  -- series colours
+    |> Chart.withColorScale "#fff5eb" "#d94801"   -- heatmap/bubble/bullet ramp
+    |> Chart.withGradient True                    -- gradient fills on bars/areas/slices
+    |> Chart.withPlotBackground "#f5f7fb"         -- panel behind the data
+    |> Chart.withBorder "#c2ccdc"                 -- border around the plot
+    |> Chart.withFont "Georgia, serif" 11         -- typography
+    |> Chart.withDots 5                           -- marker radius
+    |> Chart.withStroke 3                         -- line width
+    |> Chart.withLegend Chart.TopLeft             -- corner, or Chart.NoLegend
+    |> Chart.withLegendRow True                   -- horizontal legend
+    |> Chart.withLegendTitle "Series"
+    |> Chart.withHidden [ "cos" ]                 -- show/hide series (dimmed in the legend)
+```
+
+`withHidden` is the basis of a **dynamic, clickable legend**: keep the hidden-name list in your
+model, toggle it on a legend click, and re-render — the chart stays a pure function of that state.
+
 ## Modules
 
 - **`Scale`** — linear **and log** scales (`linear` / `log` / `convert` / `invert`), bounds and
@@ -114,18 +137,23 @@ Chart.sized 460 260
   `stackedArea`, `streamgraph`, `stackedBars`, `groupedBars`, `percentBars`, `pareto`, `histogram`,
   `density`, `pie`, `donut`, `radar`, `funnel`, `rose`, `radialBars`, `boxplot`, `candlestick`,
   `heatmap`, `sparkline`, `waterfall`, `gauge`, `bullet`, `treemap`, `gantt`; the `Config`
-  theme/annotation/axis constructors (`sized`, `darken`, `withColor`, `withGrid`, `withValues`,
-  `withTitle`, `withAxisTitles`, `withInner`, `withCurve`, `withStep`, `withTrend`, `withFormat`,
-  `withTips`, `withRefLine`, `withRefBand`, `withYDomain`, `withYTicks`, `withMargins`, `withLegend`);
-  and the building blocks (`frame`, `xAxis`, `legend`, `polylineOf`, `dotsOf`) for bespoke charts.
+  constructors for **style** (`sized`, `darken`, `withColor`, `withPalette`, `withGradient`,
+  `withColorScale`, `withPlotBackground`, `withBorder`, `withFont`, `withDots`, `withStroke`),
+  **annotation** (`withTitle`, `withAxisTitles`, `withValues`, `withCurve`, `withStep`, `withTrend`,
+  `withFormat`, `withRefLine`, `withRefBand`, `withTips`), **axis/layout** (`withGrid`, `withInner`,
+  `withYDomain`, `withYTicks`, `withMargins`) and **legend** (`withLegend`, `withLegendRow`,
+  `withLegendTitle`, `withHidden`); and the building blocks (`frame`, `xAxis`, `legend`, `polylineOf`,
+  `dotsOf`) for bespoke charts.
 
 ## Gotchas it bakes in
 
 This library targets the elm-lang JS backend, and encodes a few of its quirks so you don't trip
 on them:
 
-- **`Svg.Attributes.class` is unbound**, so SVG nodes can't be styled by CSS class — every colour
-  is set **inline** from the [`Config`](src/Chart.elm). Pass colours through the config.
+- **Several `Svg.Attributes` are unbound** — `class` (so no CSS classes; every colour is set
+  **inline** from the [`Config`](src/Chart.elm)) and also `id` / `offset` / `stop-color` /
+  `stop-opacity`. The gradient `<defs>` therefore set those through the generic, bound
+  `Html.Attributes.attribute "name" value` escape hatch, which works on SVG nodes.
 - **A record update on a record alias imported from another module miscompiles** (the un-updated
   fields come back `undefined`). So tweak a `Config` with the provided constructors —
   `Chart.sized w h`, `Chart.darken`, `Chart.withGrid on` — which do the update *inside* `Chart`,
