@@ -274,6 +274,14 @@ statTests =
                         Stat.linearRegression [ ( 5, 2 ), ( 5, 4 ), ( 5, 6 ) ]
                 in
                 Expect.equal ( fit.slope, round fit.intercept ) ( 0, 4 )
+        , test "kde peaks at the observation (standard normal height)" <|
+            \_ -> within 0.001 0.39894 (Stat.kde 1 [ 0 ] 0)
+        , test "kde falls off one bandwidth away" <|
+            \_ -> within 0.001 0.24197 (Stat.kde 1 [ 0 ] 1)
+        , test "kde averages bumps from several observations" <|
+            \_ -> within 0.001 ((Stat.kde 1 [ 0 ] 0 + Stat.kde 1 [ 4 ] 0) / 2) (Stat.kde 1 [ 0, 4 ] 0)
+        , test "kde of an empty sample is zero" <|
+            \_ -> within 0.001 0 (Stat.kde 1 [] 3)
         ]
 
 

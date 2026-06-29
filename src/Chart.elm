@@ -4,7 +4,7 @@ module Chart exposing
     , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
     , area, stackedArea, stackedBars, groupedBars, percentBars, pareto
-    , histogram, pie, donut, radar, funnel, rose
+    , histogram, density, pie, donut, radar, funnel, rose
     , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
     , frame, xAxis, polylineOf, dotsOf, legend
     )
@@ -36,7 +36,7 @@ at the call site.
 
 @docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
 @docs area, stackedArea, stackedBars, groupedBars, percentBars, pareto
-@docs histogram, pie, donut, radar, funnel, rose
+@docs histogram, density, pie, donut, radar, funnel, rose
 @docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
 
 
@@ -940,6 +940,65 @@ histogram c values =
                 (tip c (Scale.num (lo + binW * toFloat i) ++ "–" ++ Scale.num (lo + binW * toFloat (i + 1)) ++ ": " ++ String.fromInt cnt))
     in
     root c (frame c yS ++ xAxis c xS ++ List.indexedMap bar counts)
+
+
+{-| A kernel-density estimate of a raw `List Float`, drawn as a smooth filled curve — a continuous
+companion to [`histogram`](#histogram). Bandwidth is chosen by Silverman's rule of thumb (via the
+tested [`Stat.kde`](Stat)). -}
+density : Config -> List Float -> Svg msg
+density c sample =
+    let
+        n =
+            List.length sample
+
+        lo =
+            List.minimum sample |> Maybe.withDefault 0
+
+        hi =
+            List.maximum sample |> Maybe.withDefault 1
+
+        range =
+            if hi == lo then
+                1
+
+            else
+                hi - lo
+
+        silver =
+            1.06 * Stat.stdDev sample * toFloat (Basics.max 1 n) ^ (-0.2)
+
+        h =
+            if silver <= 0 then
+                range * 0.1
+
+            else
+                silver
+
+        x0 =
+            lo - 2 * h
+
+        x1 =
+            hi + 2 * h
+
+        steps =
+            64
+
+        grid =
+            List.map (\i -> x0 + (x1 - x0) * toFloat i / toFloat steps) (List.range 0 steps)
+
+        densities =
+            List.map (Stat.kde h sample) grid
+
+        xS =
+            Scale.linear ( x0, x1 ) ( c.left, c.left + plotW c )
+
+        yS =
+            yScaleFor c (0 :: densities)
+
+        pts =
+            List.map2 (\gx d -> ( Scale.convert xS gx, Scale.convert yS d )) grid densities
+    in
+    root c (frame c yS ++ xAxis c xS ++ [ areaBand c.color (Scale.convert yS 0) pts, strokeLine c c.color pts ])
 
 
 {-| A radar (spider) chart: `axes` names the spokes and each series is `(name, values)` with one

@@ -207,6 +207,7 @@ view size onSize =
             , card "Horizontal bars" "Chart.hbars cfg languages" "Categories down the left, values across — good for long labels and rankings." (Chart.hbars cfg languages)
             , card "Bubble chart" "Chart.bubble cfg planets" "A third dimension as bubble area, coloured along a sequential ramp. Hover for values." (Chart.bubble cfg planets)
             , card "Histogram" "Chart.histogram cfg scores" "A raw list of numbers binned into a distribution." (Chart.histogram cfg scores)
+            , card "Density" "Chart.density cfg scores" "A smooth kernel-density curve — the continuous companion to a histogram." (Chart.density cfg scores)
             , card "Radar chart" "Chart.radar cfg axes squads" "Several series compared across shared axes." (Chart.radar cfg radarAxes squads)
             , card "Smooth line" "Chart.line (Chart.withCurve True cfg) temps" "The same line, smoothed with a Catmull-Rom curve." (Chart.line (Chart.withCurve True cfg) temps)
             , card "Stepped line" "Chart.line (Chart.withStep True cfg) temps" "A stair step — for values that hold then jump." (Chart.line (Chart.withStep True cfg) temps)

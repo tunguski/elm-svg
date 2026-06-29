@@ -1,13 +1,16 @@
 module Stat exposing
     ( mean, median, quantile, quartiles, stdDev
     , Line, linearRegression
+    , kde
     )
 
-{-| The small statistics behind box plots, trend lines and the like: summarising a sample and
-fitting a line to points. No SVG here — it is just numbers, so it is fully unit-tested and reusable.
+{-| The small statistics behind box plots, trend lines, density curves and the like: summarising a
+sample, fitting a line to points, estimating a density. No SVG here — it is just numbers, so it is
+fully unit-tested and reusable.
 
 @docs mean, median, quantile, quartiles, stdDev
 @docs Line, linearRegression
+@docs kde
 
 -}
 
@@ -132,3 +135,24 @@ linearRegression pts =
                         (nf * sumXY - sumX * sumY) / denom
                 in
                 { slope = slope, intercept = (sumY - slope * sumX) / nf }
+
+
+{-| Gaussian kernel density estimate of `sample` at point `x`, with bandwidth `h`: the average of a
+normal bump placed on each observation. Returns `0` for an empty sample or non-positive bandwidth.
+-}
+kde : Float -> List Float -> Float -> Float
+kde h sample x =
+    case List.length sample of
+        0 ->
+            0
+
+        n ->
+            if h <= 0 then
+                0
+
+            else
+                let
+                    k u =
+                        e ^ (-0.5 * u * u) / sqrt (2 * pi)
+                in
+                List.sum (List.map (\xi -> k ((x - xi) / h)) sample) / (toFloat n * h)
