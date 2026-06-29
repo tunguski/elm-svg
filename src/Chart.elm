@@ -4,7 +4,7 @@ module Chart exposing
     , withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withFont, withDots, withStroke
     , withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
-    , RefMark, withRefLine, withRefBand, LegendPos(..), withLegend, withHidden
+    , RefMark, withRefLine, withRefBand, LegendPos(..), withLegend, withHidden, withLegendRow, withLegendTitle
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
     , area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
     , histogram, density, pie, donut, radar, funnel, rose, radialBars
@@ -35,7 +35,7 @@ at the call site.
 @docs withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
 @docs withFont, withDots, withStroke
 @docs withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
-@docs RefMark, withRefLine, withRefBand, LegendPos, withLegend, withHidden
+@docs RefMark, withRefLine, withRefBand, LegendPos, withLegend, withHidden, withLegendRow, withLegendTitle
 
 
 # Charts
@@ -121,6 +121,8 @@ type alias Config =
     , yTicks : Int
     , hidden : List String
     , legendPos : LegendPos
+    , legendHorizontal : Bool
+    , legendTitle : String
     , title : String
     , xTitle : String
     , yTitle : String
@@ -164,6 +166,8 @@ defaults =
     , yTicks = 5
     , hidden = []
     , legendPos = TopRight
+    , legendHorizontal = False
+    , legendTitle = ""
     , title = ""
     , xTitle = ""
     , yTitle = ""
@@ -372,6 +376,18 @@ bump, radar). -}
 withHidden : List String -> Config -> Config
 withHidden names c =
     { c | hidden = names }
+
+
+{-| Lay the legend out as a horizontal row (default is a vertical column). -}
+withLegendRow : Bool -> Config -> Config
+withLegendRow on c =
+    { c | legendHorizontal = on }
+
+
+{-| Give the legend a heading. -}
+withLegendTitle : String -> Config -> Config
+withLegendTitle t c =
+    { c | legendTitle = t }
 
 
 {-| Add a horizontal reference line at `value` (e.g. a target or threshold), labelled at the right. -}
@@ -2530,7 +2546,9 @@ titles c =
 
 
 {-| A legend: a colour swatch and name per series, placed in the corner set by
-[`withLegend`](#withLegend) (top-right by default; `NoLegend` hides it). -}
+[`withLegend`](#withLegend) (top-right by default; `NoLegend` hides it), laid out as a column or —
+with [`withLegendRow`](#withLegendRow) — a horizontal row, optionally headed by a
+[`withLegendTitle`](#withLegendTitle). Hidden series (see [`withHidden`](#withHidden)) are dimmed. -}
 legend : Config -> List String -> Svg msg
 legend c names =
     let
@@ -2546,39 +2564,10 @@ legend c names =
         isTop =
             c.legendPos == TopRight || c.legendPos == TopLeft
 
-        y0 =
-            if isTop then
-                c.top + 2
+        hasTitle =
+            c.legendTitle /= ""
 
-            else
-                c.top + plotH c - toFloat n * lineH - 2
-
-        xEdge =
-            if isRight then
-                c.left + plotW c - 8
-
-            else
-                c.left + 8
-
-        row i name =
-            let
-                y =
-                    y0 + toFloat i * lineH
-
-                swatchX =
-                    if isRight then
-                        xEdge - 9
-
-                    else
-                        xEdge
-
-                ( textX, anchor ) =
-                    if isRight then
-                        ( xEdge - 13, "end" )
-
-                    else
-                        ( xEdge + 13, "start" )
-            in
+        dim name inner =
             Svg.g
                 [ SA.opacity
                     (if List.member name c.hidden then
@@ -2588,15 +2577,108 @@ legend c names =
                         "1"
                     )
                 ]
-                [ Svg.rect [ SA.x (Scale.num swatchX), SA.y (Scale.num y), SA.width "9", SA.height "9", SA.fill (fillC c (colorAt c i)) ] []
-                , Svg.text_ [ SA.x (Scale.num textX), SA.y (Scale.num (y + 8)), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor anchor ] [ Svg.text (clip name) ]
-                ]
+                inner
+
+        labelText x y anchor txt =
+            Svg.text_ [ SA.x (Scale.num x), SA.y (Scale.num y), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor anchor ] [ Svg.text txt ]
+
+        swatch i x y =
+            Svg.rect [ SA.x (Scale.num x), SA.y (Scale.num y), SA.width "9", SA.height "9", SA.fill (fillC c (colorAt c i)) ] []
+
+        -- estimate an entry's width (no text measurement available): swatch + gap + glyphs + spacing
+        entryW name =
+            21 + toFloat (String.length (clip name)) * (c.fontSize * 0.58)
+
+        vertical =
+            let
+                rows =
+                    toFloat (n + (if hasTitle then 1 else 0))
+
+                y0 =
+                    if isTop then
+                        c.top + 2
+
+                    else
+                        c.top + plotH c - rows * lineH - 2
+
+                xEdge =
+                    if isRight then
+                        c.left + plotW c
+
+                    else
+                        c.left + 8
+
+                anchor =
+                    if isRight then
+                        "end"
+
+                    else
+                        "start"
+
+                titleNode =
+                    if hasTitle then
+                        [ labelText xEdge (y0 + 8) anchor c.legendTitle ]
+
+                    else
+                        []
+
+                row i name =
+                    let
+                        y =
+                            y0 + toFloat (i + (if hasTitle then 1 else 0)) * lineH
+                    in
+                    dim name
+                        (if isRight then
+                            [ swatch i (xEdge - 9) y, labelText (xEdge - 13) (y + 8) "end" (clip name) ]
+
+                         else
+                            [ swatch i xEdge y, labelText (xEdge + 13) (y + 8) "start" (clip name) ]
+                        )
+            in
+            titleNode ++ List.indexedMap row names
+
+        horizontal =
+            let
+                y =
+                    if isTop then
+                        c.top + 2
+
+                    else
+                        c.top + plotH c - 11
+
+                titleW =
+                    if hasTitle then
+                        toFloat (String.length c.legendTitle) * (c.fontSize * 0.58) + 10
+
+                    else
+                        0
+
+                xs =
+                    Tuple.second (List.foldl (\name ( x, acc ) -> ( x + entryW name, acc ++ [ x ] )) ( c.left + titleW, [] ) names)
+
+                titleNode =
+                    if hasTitle then
+                        [ labelText c.left (y + 8) "start" c.legendTitle ]
+
+                    else
+                        []
+
+                entry i ( name, x ) =
+                    dim name [ swatch i x y, labelText (x + 12) (y + 8) "start" (clip name) ]
+            in
+            titleNode ++ List.indexedMap entry (List.map2 Tuple.pair names xs)
     in
     if n <= 1 || c.legendPos == NoLegend then
         Svg.text ""
 
     else
-        Svg.g [] (List.indexedMap row names)
+        Svg.g []
+            (if c.legendHorizontal then
+                horizontal
+
+             else
+                vertical
+            )
 
 
 {-| A `<polyline>` through pixel points, in the given colour. -}

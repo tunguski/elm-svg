@@ -214,6 +214,7 @@ view size onSize =
             , card "Stacked area" "Chart.stackedArea cfg bands" "Named series stacked into translucent filled bands." (Chart.stackedArea cfg bands)
             , card "Streamgraph" "Chart.streamgraph cfg bands" "The same series flowing around a centred baseline." (Chart.streamgraph cfg bands)
             , card "Legend placement" "Chart.multiLine (Chart.withLegend Chart.BottomLeft cfg) waves" "Move the legend to any corner — or hide it with NoLegend." (Chart.multiLine (Chart.withLegend Chart.BottomLeft cfg) waves)
+            , card "Legend row + title" "Chart.withLegendRow True · withLegendTitle \"Series\"" "A horizontal legend with a heading." (Chart.multiLine (Chart.withLegendTitle "Series" (Chart.withLegendRow True (Chart.withLegend Chart.TopLeft cfg))) waves)
             , card "Stacked bars" "Chart.stackedBars cfg revenue" "Each category split into stacked, colour-keyed segments." (Chart.stackedBars cfg revenue)
             , card "Grouped bars" "Chart.groupedBars cfg revenue" "The same data as side-by-side bars per category." (Chart.groupedBars cfg revenue)
             , card "100% stacked" "Chart.percentBars cfg revenue" "Each category normalised to 100% — compares composition, not totals." (Chart.percentBars cfg revenue)
