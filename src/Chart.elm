@@ -5,7 +5,7 @@ module Chart exposing
     , bars, hbars, line, scatter, multiLine, bubble
     , area, stackedArea, stackedBars, groupedBars
     , histogram, pie, donut, radar
-    , boxplot, candlestick, heatmap, sparkline, waterfall
+    , boxplot, candlestick, heatmap, sparkline, waterfall, gauge
     , frame, xAxis, polylineOf, dotsOf, legend
     )
 
@@ -37,7 +37,7 @@ at the call site.
 @docs bars, hbars, line, scatter, multiLine, bubble
 @docs area, stackedArea, stackedBars, groupedBars
 @docs histogram, pie, donut, radar
-@docs boxplot, candlestick, heatmap, sparkline, waterfall
+@docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge
 
 
 # Building blocks
@@ -1282,6 +1282,54 @@ waterfall c data =
                 []
     in
     root c (frame c yS ++ List.concat (List.indexedMap connector zipped) ++ List.indexedMap bar zipped)
+
+
+{-| A gauge (KPI dial): `value` shown as a filled arc on a half-ring scaled from `lo` to `hi`, with
+the value read out in the middle. For a single headline number on a dashboard.
+-}
+gauge : Config -> Float -> Float -> Float -> Svg msg
+gauge c lo hi value =
+    let
+        cx =
+            c.left + plotW c / 2
+
+        cy =
+            c.top + plotH c * 0.74
+
+        outerR =
+            Basics.min (plotW c / 2 - 6) (cy - c.top - 4)
+
+        innerR =
+            outerR * 0.6
+
+        center =
+            ( cx, cy )
+
+        startA =
+            1.5 * pi
+
+        t =
+            clamp 0
+                1
+                (if hi == lo then
+                    0
+
+                 else
+                    (value - lo) / (hi - lo)
+                )
+
+        arc color from to =
+            Svg.polyline [ SA.points (Scale.pointsString (Arc.ringPoints center innerR outerR from to)), SA.fill color, SA.stroke "none" ] []
+    in
+    root c
+        [ arc c.grid startA (startA + pi)
+        , arc c.color startA (startA + t * pi)
+        , Svg.text_
+            [ SA.x (Scale.num cx), SA.y (Scale.num (cy - outerR * 0.12)), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num (c.fontSize * 2.2)), SA.textAnchor "middle" ]
+            [ Svg.text (c.format value) ]
+        , valueLabel c (cx - (outerR + innerR) / 2) (cy + 12) (c.format lo)
+        , valueLabel c (cx + (outerR + innerR) / 2) (cy + 12) (c.format hi)
+        ]
 
 
 
