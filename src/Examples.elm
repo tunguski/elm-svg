@@ -150,6 +150,11 @@ teams =
     [ ( "Engineering", 42 ), ( "Sales", 28 ), ( "Support", 16 ), ( "Design", 10 ), ( "Ops", 8 ), ( "Legal", 4 ) ]
 
 
+funnelData : List ( String, Float )
+funnelData =
+    [ ( "Visits", 1000 ), ( "Signups", 620 ), ( "Trials", 380 ), ( "Paid", 145 ), ( "Renewed", 98 ) ]
+
+
 {-| The gallery, at the given size, with size buttons that send `onSize`. -}
 view : Float -> (Float -> msg) -> Html msg
 view size onSize =
@@ -176,6 +181,7 @@ view size onSize =
             , card "100% stacked" "Chart.percentBars cfg revenue" "Each category normalised to 100% — compares composition, not totals." (Chart.percentBars cfg revenue)
             , card "Pie chart" "Chart.pie cfg share" "Slices sized by value, summing to the whole." (Chart.pie cfg share)
             , card "Donut chart" "Chart.donut (Chart.withInner 0.6 cfg) share" "A pie with a hole — set by Chart.withInner." (Chart.donut (Chart.withInner 0.6 cfg) share)
+            , card "Funnel" "Chart.funnel cfg funnelData" "Narrowing stages for a conversion flow; hover for share of the first." (Chart.funnel cfg funnelData)
             , card "Horizontal bars" "Chart.hbars cfg languages" "Categories down the left, values across — good for long labels and rankings." (Chart.hbars cfg languages)
             , card "Bubble chart" "Chart.bubble cfg planets" "A third dimension as bubble area, coloured along a sequential ramp. Hover for values." (Chart.bubble cfg planets)
             , card "Histogram" "Chart.histogram cfg scores" "A raw list of numbers binned into a distribution." (Chart.histogram cfg scores)

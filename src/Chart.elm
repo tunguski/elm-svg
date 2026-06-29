@@ -4,7 +4,7 @@ module Chart exposing
     , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope
     , area, stackedArea, stackedBars, groupedBars, percentBars
-    , histogram, pie, donut, radar
+    , histogram, pie, donut, radar, funnel
     , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap
     , frame, xAxis, polylineOf, dotsOf, legend
     )
@@ -36,7 +36,7 @@ at the call site.
 
 @docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope
 @docs area, stackedArea, stackedBars, groupedBars, percentBars
-@docs histogram, pie, donut, radar
+@docs histogram, pie, donut, radar, funnel
 @docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap
 
 
@@ -1561,6 +1561,53 @@ treemap c data =
                 ]
     in
     root c (List.indexedMap cell (List.map2 Tuple.pair sorted rects))
+
+
+{-| A funnel chart of `(label, value)` stages: centred bars whose width tracks each stage's value,
+narrowing down the page. Tooltips show each stage's share of the first. Good for conversion flows.
+-}
+funnel : Config -> List ( String, Float ) -> Svg msg
+funnel c data =
+    let
+        values =
+            List.map Tuple.second data
+
+        maxV =
+            Basics.max 1.0e-9 (List.maximum values |> Maybe.withDefault 1)
+
+        first =
+            Basics.max 1.0e-9 (List.head values |> Maybe.withDefault maxV)
+
+        count =
+            List.length data
+
+        rowH =
+            plotH c / toFloat (Basics.max 1 count)
+
+        barH =
+            rowH * 0.74
+
+        cx =
+            c.left + plotW c / 2
+
+        stage i ( lbl, v ) =
+            let
+                w =
+                    plotW c * (v / maxV)
+
+                y =
+                    c.top + rowH * toFloat i + (rowH - barH) / 2
+            in
+            Svg.g []
+                [ Svg.rect
+                    [ SA.x (Scale.num (cx - w / 2)), SA.y (Scale.num y), SA.width (Scale.num w), SA.height (Scale.num barH), SA.fill (colorAt i) ]
+                    (tip c (lbl ++ ": " ++ c.format v ++ " (" ++ Scale.num (v / first * 100) ++ "% of first)"))
+                , Svg.text_
+                    [ SA.x (Scale.num cx), SA.y (Scale.num (y + barH * 0.64)), SA.fill "#ffffff", SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor "middle" ]
+                    [ Svg.text (clip lbl ++ "  " ++ c.format v) ]
+                ]
+    in
+    root c (List.indexedMap stage data)
 
 
 
