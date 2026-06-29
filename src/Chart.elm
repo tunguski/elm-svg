@@ -1,6 +1,7 @@
 module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
-    , withColor, withPalette, withGradient, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
+    , withColor, withPalette, withGradient, withPlotBackground, withBorder
+    , withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
     , RefMark, withRefLine, withRefBand, LegendPos(..), withLegend
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
@@ -29,7 +30,8 @@ at the call site.
 # Config
 
 @docs Config, defaults, dark, darken, sized, colored, palette
-@docs withColor, withPalette, withGradient, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
+@docs withColor, withPalette, withGradient, withPlotBackground, withBorder
+@docs withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
 @docs withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
 @docs RefMark, withRefLine, withRefBand, LegendPos, withLegend
 
@@ -95,6 +97,8 @@ type alias Config =
     , label : String
     , grid : String
     , background : String
+    , plotBackground : String
+    , border : String
     , font : String
     , fontSize : Float
     , dotR : Float
@@ -134,6 +138,8 @@ defaults =
     , label = "#61708a"
     , grid = "#e7ecf4"
     , background = "none"
+    , plotBackground = "none"
+    , border = "none"
     , font = "system-ui, sans-serif"
     , fontSize = 9
     , dotR = 2.6
@@ -213,6 +219,19 @@ fading toward the baseline) instead of a flat fill. -}
 withGradient : Bool -> Config -> Config
 withGradient on c =
     { c | gradient = on }
+
+
+{-| Fill the **plot area** (inside the axes) with a colour, distinct from the chart background —
+e.g. a faint panel behind the data. `"none"` (the default) leaves it clear. -}
+withPlotBackground : String -> Config -> Config
+withPlotBackground colour c =
+    { c | plotBackground = colour }
+
+
+{-| Draw a **border** around the plot area in the given colour (`"none"` by default). -}
+withBorder : String -> Config -> Config
+withBorder colour c =
+    { c | border = colour }
 
 
 {-| Turn horizontal gridlines on (default) or off. -}
@@ -2303,11 +2322,32 @@ frame c yS =
 
                 Nothing ->
                     Scale.niceTicks c.yTicks ( yS.d0, yS.d1 )
+
+        panel fill stroke =
+            Svg.rect
+                [ SA.x (Scale.num left), SA.y (Scale.num c.top), SA.width (Scale.num (plotW c)), SA.height (Scale.num (plotH c)), SA.fill fill, SA.stroke stroke, SA.strokeWidth "1" ]
+                []
+
+        plotBg =
+            if c.plotBackground == "none" then
+                []
+
+            else
+                [ panel c.plotBackground "none" ]
+
+        borderRect =
+            if c.border == "none" then
+                []
+
+            else
+                [ panel "none" c.border ]
     in
-    List.concatMap gridFor tickVals
+    plotBg
+        ++ List.concatMap gridFor tickVals
         ++ refMarks c yS
         ++ [ axisLine c left c.top left (c.top + plotH c) ]
         ++ zeroLine
+        ++ borderRect
         ++ titles c
 
 
