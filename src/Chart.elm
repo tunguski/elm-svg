@@ -1,7 +1,7 @@
 module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
     , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
-    , withStep, withTrend, RefMark, withRefLine, withRefBand
+    , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
     , bars, hbars, line, scatter, multiLine, bubble
     , area, stackedArea, stackedBars, groupedBars
     , histogram, pie, donut, radar
@@ -29,7 +29,7 @@ at the call site.
 
 @docs Config, defaults, dark, darken, sized, colored, palette
 @docs withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
-@docs withStep, withTrend, RefMark, withRefLine, withRefBand
+@docs withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
 
 
 # Charts
@@ -93,6 +93,7 @@ type alias Config =
     , trend : Bool
     , showTips : Bool
     , refs : List RefMark
+    , format : Float -> String
     , title : String
     , xTitle : String
     , yTitle : String
@@ -126,6 +127,7 @@ defaults =
     , trend = False
     , showTips = True
     , refs = []
+    , format = Scale.num
     , title = ""
     , xTitle = ""
     , yTitle = ""
@@ -228,6 +230,14 @@ withStep on c =
 withTrend : Bool -> Config -> Config
 withTrend on c =
     { c | trend = on }
+
+
+{-| Set the number formatter for Y-axis ticks and value labels — see [`Format`](Format) for
+ready-made ones (`Format.percent`, `Format.compact`, `Format.prefixed "$" …`).
+-}
+withFormat : (Float -> String) -> Config -> Config
+withFormat f c =
+    { c | format = f }
 
 
 {-| Add a horizontal reference line at `value` (e.g. a target or threshold), labelled at the right. -}
@@ -380,7 +390,7 @@ bars c data =
 
                 value =
                     if c.showValues then
-                        [ valueLabel c cx (Basics.min y zeroY - 3) (Scale.num v) ]
+                        [ valueLabel c cx (Basics.min y zeroY - 3) (c.format v) ]
 
                     else
                         []
@@ -1246,7 +1256,7 @@ frame c yS =
              else
                 []
             )
-                ++ [ tickLabel c (left - 5) (y + 3) (Scale.num v) ]
+                ++ [ tickLabel c (left - 5) (y + 3) (c.format v) ]
     in
     List.concatMap gridFor (Scale.niceTicks 5 ( yS.d0, yS.d1 ))
         ++ refMarks c yS

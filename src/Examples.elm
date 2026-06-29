@@ -12,6 +12,7 @@ it. It is parameterised by the current `size` and the message that sets it, so i
 -}
 
 import Chart
+import Format
 import Html exposing (Html, code, div, h3, p, pre, section, span, text)
 import Html.Attributes as HA
 import Html.Events as HE
@@ -166,6 +167,7 @@ view size onSize =
             , card "Trend line" "Chart.scatter (Chart.withTrend True cfg) cloud" "A least-squares regression line over the points." (Chart.scatter (Chart.withTrend True cfg) cloud)
             , card "Reference marks" "Chart.bars (Chart.withRefLine 160 \"goal\" …) sales" "A target line and a tolerance band behind the data." (Chart.bars (Chart.withRefLine 160 "goal" (Chart.withRefBand 150 175 "ok" cfg)) sales)
             , card "Sparkline" "Chart.sparkline (Chart.sized 220 52) trail" "A tiny, axis-less line for inline use." (Chart.sparkline (Chart.sized 220 52) trail)
+            , card "Formatted axis" "Chart.withFormat (Format.prefixed \"$\" …)" "Number formatting on ticks and value labels — money, percent, compact k/M." (Chart.bars (Chart.withFormat (Format.prefixed "$" (Format.decimals 0)) (Chart.withValues True cfg)) sales)
             , card "Titled & dark" "Chart.bars (Chart.withTitle \"Sales\" …) sales" "Chart and axis titles, on the dark theme — Chart.darken keeps the slider size." (Chart.bars (Chart.withTitle "Sales" (Chart.withAxisTitles "month" "" (Chart.darken cfg))) sales)
             ]
         ]

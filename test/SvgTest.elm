@@ -8,6 +8,7 @@ checked here, headlessly and exactly.
 import Arc
 import Curve
 import Expect
+import Format
 import Scale
 import Stat
 import Test exposing (Test, describe, test)
@@ -27,6 +28,7 @@ suite =
         , colorTests
         , curveTests
         , statTests
+        , numberFormatTests
         , formatTests
         ]
 
@@ -270,6 +272,32 @@ statTests =
                         Stat.linearRegression [ ( 5, 2 ), ( 5, 4 ), ( 5, 6 ) ]
                 in
                 Expect.equal ( fit.slope, round fit.intercept ) ( 0, 4 )
+        ]
+
+
+numberFormatTests : Test
+numberFormatTests =
+    describe "Format"
+        [ test "decimals keeps a fixed number of places" <|
+            \_ -> Expect.equal (Format.decimals 1 3.14159) "3.1"
+        , test "decimals pads to the requested width" <|
+            \_ -> Expect.equal (Format.decimals 2 1.2) "1.20"
+        , test "decimals 0 rounds to an integer" <|
+            \_ -> Expect.equal (Format.decimals 0 2.6) "3"
+        , test "decimals handles negatives" <|
+            \_ -> Expect.equal (Format.decimals 1 -2.34) "-2.3"
+        , test "percent scales a fraction" <|
+            \_ -> Expect.equal (Format.percent 0.64) "64%"
+        , test "compact abbreviates thousands" <|
+            \_ -> Expect.equal (Format.compact 1200) "1.2k"
+        , test "compact abbreviates millions" <|
+            \_ -> Expect.equal (Format.compact 3400000) "3.4M"
+        , test "compact leaves small numbers whole" <|
+            \_ -> Expect.equal (Format.compact 950) "950"
+        , test "prefixed adds a symbol" <|
+            \_ -> Expect.equal (Format.prefixed "$" (Format.decimals 0) 1000) "$1000"
+        , test "suffixed adds a unit" <|
+            \_ -> Expect.equal (Format.suffixed " kg" (Format.decimals 1) 2.5) "2.5 kg"
         ]
 
 
