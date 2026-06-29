@@ -5,7 +5,7 @@ module Chart exposing
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope
     , area, stackedArea, stackedBars, groupedBars, percentBars
     , histogram, pie, donut, radar
-    , boxplot, candlestick, heatmap, sparkline, waterfall, gauge
+    , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap
     , frame, xAxis, polylineOf, dotsOf, legend
     )
 
@@ -37,7 +37,7 @@ at the call site.
 @docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope
 @docs area, stackedArea, stackedBars, groupedBars, percentBars
 @docs histogram, pie, donut, radar
-@docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge
+@docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap
 
 
 # Building blocks
@@ -48,6 +48,7 @@ at the call site.
 
 import Arc
 import Curve
+import Layout
 import Scale exposing (Scale)
 import Stat
 import Svg exposing (Svg)
@@ -1523,6 +1524,43 @@ scatterErr c data =
                 ]
     in
     root c (frame c yS ++ xAxis c xS ++ List.map mark data)
+
+
+{-| A treemap of `(label, value)` pairs: nested rectangles whose areas are proportional to the
+values (largest first), tiled by the pure [`Layout`](Layout) module. Cells big enough are labelled;
+hover any cell for its value.
+-}
+treemap : Config -> List ( String, Float ) -> Svg msg
+treemap c data =
+    let
+        sorted =
+            List.sortBy (\( _, v ) -> -v) data
+
+        rects =
+            Layout.treemap ( c.left, c.top, plotW c, plotH c ) (List.map Tuple.second sorted)
+
+        border =
+            if c.background == "none" then
+                "#ffffff"
+
+            else
+                c.background
+
+        cell i ( ( lbl, v ), ( x, y, w, h ) ) =
+            Svg.g []
+                [ Svg.rect
+                    [ SA.x (Scale.num x), SA.y (Scale.num y), SA.width (Scale.num w), SA.height (Scale.num h), SA.fill (colorAt i), SA.stroke border, SA.strokeWidth "1" ]
+                    (tip c (lbl ++ ": " ++ c.format v))
+                , if w > 34 && h > 14 then
+                    Svg.text_
+                        [ SA.x (Scale.num (x + 4)), SA.y (Scale.num (y + 13)), SA.fill "#ffffff", SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize) ]
+                        [ Svg.text (clip lbl) ]
+
+                  else
+                    Svg.text ""
+                ]
+    in
+    root c (List.indexedMap cell (List.map2 Tuple.pair sorted rects))
 
 
 

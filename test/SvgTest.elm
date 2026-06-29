@@ -9,6 +9,7 @@ import Arc
 import Curve
 import Expect
 import Format
+import Layout
 import Scale
 import Stat
 import Test exposing (Test, describe, test)
@@ -29,6 +30,7 @@ suite =
         , curveTests
         , statTests
         , numberFormatTests
+        , layoutTests
         , formatTests
         ]
 
@@ -298,6 +300,29 @@ numberFormatTests =
             \_ -> Expect.equal (Format.prefixed "$" (Format.decimals 0) 1000) "$1000"
         , test "suffixed adds a unit" <|
             \_ -> Expect.equal (Format.suffixed " kg" (Format.decimals 1) 2.5) "2.5 kg"
+        ]
+
+
+layoutTests : Test
+layoutTests =
+    let
+        area ( _, _, w, h ) =
+            w * h
+    in
+    describe "Layout.treemap"
+        [ test "gives one rectangle per value" <|
+            \_ -> Expect.equal (List.length (Layout.treemap ( 0, 0, 100, 100 ) [ 1, 1, 1, 1 ])) 4
+        , test "tiles the whole box (areas sum to the box area)" <|
+            \_ -> within 0.001 10000 (List.sum (List.map area (Layout.treemap ( 0, 0, 100, 100 ) [ 3, 2, 1, 4 ])))
+        , test "areas are proportional to the values" <|
+            \_ ->
+                Expect.equal
+                    (List.map (round << area) (Layout.treemap ( 0, 0, 100, 100 ) [ 3, 1 ]))
+                    [ 7500, 2500 ]
+        , test "a single value fills the box" <|
+            \_ -> Expect.equal (Layout.treemap ( 0, 0, 40, 20 ) [ 5 ]) [ ( 0, 0, 40, 20 ) ]
+        , test "an empty list yields no rectangles" <|
+            \_ -> Expect.equal (Layout.treemap ( 0, 0, 100, 100 ) []) []
         ]
 
 
