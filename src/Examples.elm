@@ -1,17 +1,18 @@
-module Examples exposing (grid)
+module Examples exposing (examples)
 
-{-| The elm-svg **charts** showcase — a gallery of live charts drawn by the library, each with the
-one line of code that produced it. The host ([`Gallery`](Gallery)) wraps this in a tabbed page; here
-we only render the grid of chart cards at a given size.
+{-| The elm-svg **charts** showcase — the list of [`Example`](Example)s, each carrying the live chart
+and the complete, self-contained Elm source (data + config + call) that reproduces it. The data
+definitions in the code are *derived* from the same values that are rendered, so they always match.
+The host ([`Gallery`](Gallery)) shows them as clickable cards with a code detail view.
 
-@docs grid
+@docs examples
 
 -}
 
 import Chart
+import Example exposing (Example)
 import Format
-import Html exposing (Html, code, div, h3, p, pre, section, text)
-import Html.Attributes as HA
+import Html exposing (Html)
 
 
 sales : List ( String, Float )
@@ -185,73 +186,219 @@ league =
     ]
 
 
-{-| The grid of chart cards, drawn at the given size. -}
-grid : Float -> Html msg
-grid size =
+
+-- THE EXAMPLES ---------------------------------------------------------------
+
+
+{-| Every chart example, with its live view and reproducing source, at the given size. -}
+examples : Float -> List (Example msg)
+examples size =
     let
         cfg =
             Chart.sized size (size * 0.55)
+
+        salesD =
+            def "sales" (listOf sf sales)
+
+        tempsD =
+            def "temps" (listOf sf temps)
+
+        cloudD =
+            def "cloud" (listOf ff cloud)
+
+        revenueD =
+            def "revenue" (listOf slsf revenue)
+
+        shareD =
+            def "share" (listOf sf share)
+
+        scoresD =
+            def "scores" (listOf nm scores)
     in
-    section [ HA.class "es-grid" ]
-            [ card "Bar chart" "Chart.bars (Chart.withValues True cfg) sales" "Categorical values over gridlines, labelled per bar; a zero baseline is always shown." (Chart.bars (Chart.withValues True cfg) sales)
-            , card "Line chart" "Chart.line cfg temps" "A value per category, with markers. Negative values dip below the baseline." (Chart.line cfg temps)
-            , card "Area chart" "Chart.area (Chart.withColor \"#0f9d58\" cfg) sales" "A line with the region down to the baseline filled." (Chart.area (Chart.withColor "#0f9d58" cfg) sales)
-            , card "Scatter plot" "Chart.scatter cfg cloud" "Raw (x, y) points, each axis scaled to its own data." (Chart.scatter cfg cloud)
-            , card "Multi-series" "Chart.multiLine cfg waves" "Several named series, each in a palette colour, with a legend." (Chart.multiLine cfg waves)
-            , card "Bump chart" "Chart.bump cfg league" "Each series' rank per period, connected — how an ordering shifts over time." (Chart.bump cfg league)
-            , card "Show / hide series" "Chart.multiLine (Chart.withHidden [ \"cos\" ] cfg) waves" "Hide series by name (dimmed in the legend) — drive a clickable legend from your model." (Chart.multiLine (Chart.withHidden [ "cos" ] cfg) waves)
-            , card "Stacked area" "Chart.stackedArea cfg bands" "Named series stacked into translucent filled bands." (Chart.stackedArea cfg bands)
-            , card "Streamgraph" "Chart.streamgraph cfg bands" "The same series flowing around a centred baseline." (Chart.streamgraph cfg bands)
-            , card "Legend placement" "Chart.multiLine (Chart.withLegend Chart.BottomLeft cfg) waves" "Move the legend to any corner — or hide it with NoLegend." (Chart.multiLine (Chart.withLegend Chart.BottomLeft cfg) waves)
-            , card "Legend row + title" "Chart.withLegendRow True · withLegendTitle \"Series\"" "A horizontal legend with a heading." (Chart.multiLine (Chart.withLegendTitle "Series" (Chart.withLegendRow True (Chart.withLegend Chart.TopLeft cfg))) waves)
-            , card "Stacked bars" "Chart.stackedBars cfg revenue" "Each category split into stacked, colour-keyed segments." (Chart.stackedBars cfg revenue)
-            , card "Grouped bars" "Chart.groupedBars cfg revenue" "The same data as side-by-side bars per category." (Chart.groupedBars cfg revenue)
-            , card "100% stacked" "Chart.percentBars cfg revenue" "Each category normalised to 100% — compares composition, not totals." (Chart.percentBars cfg revenue)
-            , card "Pareto" "Chart.pareto cfg defects" "Sorted bars with a cumulative-% line on a right axis — the 80/20 view." (Chart.pareto cfg defects)
-            , card "Pie chart" "Chart.pie cfg share" "Slices sized by value, summing to the whole." (Chart.pie cfg share)
-            , card "Custom palette" "Chart.pie (Chart.withPalette earthy cfg) share" "Bring your own series colours with Chart.withPalette." (Chart.pie (Chart.withPalette [ "#264653", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51" ] cfg) share)
-            , card "Gradient fills" "Chart.bars (Chart.withGradient True cfg) sales" "Vertical gradient fills on bars, areas and slices." (Chart.bars (Chart.withGradient True cfg) sales)
-            , card "Plot panel & border" "Chart.line (Chart.withPlotBackground \"#f5f7fb\" …) temps" "A panel behind the data and a border around the plot area." (Chart.line (Chart.withPlotBackground "#f5f7fb" (Chart.withBorder "#c2ccdc" cfg)) temps)
-            , card "Donut chart" "Chart.donut (Chart.withInner 0.6 cfg) share" "A pie with a hole — set by Chart.withInner." (Chart.donut (Chart.withInner 0.6 cfg) share)
-            , card "Funnel" "Chart.funnel cfg funnelData" "Narrowing stages for a conversion flow; hover for share of the first." (Chart.funnel cfg funnelData)
-            , card "Polar area" "Chart.rose cfg winds" "Equal-angle slices with radius by value — a Nightingale rose." (Chart.rose cfg winds)
-            , card "Radial bars" "Chart.radialBars cfg share" "Concentric arcs, one ring per category, sweep by value." (Chart.radialBars cfg share)
-            , card "Horizontal bars" "Chart.hbars cfg languages" "Categories down the left, values across — good for long labels and rankings." (Chart.hbars cfg languages)
-            , card "Bubble chart" "Chart.bubble cfg planets" "A third dimension as bubble area, coloured along a sequential ramp. Hover for values." (Chart.bubble cfg planets)
-            , card "Histogram" "Chart.histogram cfg scores" "A raw list of numbers binned into a distribution." (Chart.histogram cfg scores)
-            , card "Density" "Chart.density cfg scores" "A smooth kernel-density curve — the continuous companion to a histogram." (Chart.density cfg scores)
-            , card "Radar chart" "Chart.radar cfg axes squads" "Several series compared across shared axes." (Chart.radar cfg radarAxes squads)
-            , card "Smooth line" "Chart.line (Chart.withCurve True cfg) temps" "The same line, smoothed with a Catmull-Rom curve." (Chart.line (Chart.withCurve True cfg) temps)
-            , card "Stepped line" "Chart.line (Chart.withStep True cfg) temps" "A stair step — for values that hold then jump." (Chart.line (Chart.withStep True cfg) temps)
-            , card "Mark styling" "Chart.withFont \"Georgia, serif\" 11 · withStroke 3.5 · withDots 5" "Tune typography, line weight and marker size." (Chart.line (Chart.withStroke 3.5 (Chart.withDots 5 (Chart.withFont "Georgia, serif" 11 cfg))) temps)
-            , card "Box plots" "Chart.boxplot cfg samples" "Quartiles, median and whiskers per sample, from the tested Stat module." (Chart.boxplot cfg samples)
-            , card "Candlestick" "Chart.candlestick cfg ohlc" "Open/high/low/close — up days green, down days red." (Chart.candlestick cfg ohlc)
-            , card "Heatmap" "Chart.heatmap cfg cols rows grid" "A grid shaded along a colour ramp; hover for values." (Chart.heatmap cfg heatCols heatRows heatVals)
-            , card "Custom colour scale" "Chart.heatmap (Chart.withColorScale \"#fff5eb\" \"#d94801\" cfg) …" "Set the sequential ramp for heatmaps, bubbles and bullets." (Chart.heatmap (Chart.withColorScale "#fff5eb" "#d94801" cfg) heatCols heatRows heatVals)
-            , card "Treemap" "Chart.treemap cfg teams" "Nested rectangles sized by value, tiled by the Layout module." (Chart.treemap cfg teams)
-            , card "Gantt" "Chart.gantt cfg schedule" "Task bars spanning their start–end on a shared time axis." (Chart.gantt cfg schedule)
-            , card "Trend line" "Chart.scatter (Chart.withTrend True cfg) cloud" "A least-squares regression line over the points." (Chart.scatter (Chart.withTrend True cfg) cloud)
-            , card "Error bars" "Chart.scatterErr cfg measured" "Points with a vertical y ± error whisker each." (Chart.scatterErr cfg measured)
-            , card "Reference marks" "Chart.bars (Chart.withRefLine 160 \"goal\" …) sales" "A target line and a tolerance band behind the data." (Chart.bars (Chart.withRefLine 160 "goal" (Chart.withRefBand 150 175 "ok" cfg)) sales)
-            , card "Sparkline" "Chart.sparkline (Chart.sized 220 52) trail" "A tiny, axis-less line for inline use." (Chart.sparkline (Chart.sized 220 52) trail)
-            , card "Waterfall" "Chart.waterfall cfg cashflow" "Floating bars bridge a start value to an end through up/down contributions." (Chart.waterfall cfg cashflow)
-            , card "Gauge" "Chart.gauge cfg 0 100 72" "A single headline value as a dial — for KPIs on a dashboard." (Chart.gauge cfg 0 100 72)
-            , card "Bullet" "Chart.bullet cfg { value = 72, target = 85, … }" "A compact KPI: measure bar over qualitative bands with a target tick." (Chart.bullet cfg { value = 72, target = 85, max = 100, bands = [ 50, 75 ] })
-            , card "Lollipop" "Chart.lollipop cfg sales" "Stems topped with dots — a lighter alternative to bars." (Chart.lollipop cfg sales)
-            , card "Slope chart" "Chart.slope cfg \"2019\" \"2024\" ranks" "Value or rank changes between two periods — green up, red down." (Chart.slope cfg "2019" "2024" ranks)
-            , card "Dumbbell" "Chart.dumbbell cfg ranges" "A low–high range per category, as two connected dots." (Chart.dumbbell cfg ranges)
-            , card "Population pyramid" "Chart.pyramid cfg \"Male\" \"Female\" ages" "Back-to-back bars comparing two groups across categories." (Chart.pyramid cfg "Male" "Female" ages)
-            , card "Formatted axis" "Chart.withFormat (Format.prefixed \"$\" …)" "Number formatting on ticks and value labels — money, percent, compact k/M." (Chart.bars (Chart.withFormat (Format.prefixed "$" (Format.decimals 0)) (Chart.withValues True cfg)) sales)
-            , card "Pinned axis" "Chart.line (Chart.withYDomain -10 15 cfg) temps" "A fixed Y domain and tick count, instead of fitting to the data." (Chart.line (Chart.withYTicks 5 (Chart.withYDomain -10 15 cfg)) temps)
-            , card "Titled & dark" "Chart.bars (Chart.withTitle \"Sales\" …) sales" "Chart and axis titles, on the dark theme — Chart.darken keeps the slider size." (Chart.bars (Chart.withTitle "Sales" (Chart.withAxisTitles "month" "" (Chart.darken cfg))) sales)
-            ]
+    [ ex "Bar chart" "Categorical values over gridlines, labelled per bar; a zero baseline is always shown." [ salesD ] """Chart.bars (Chart.withValues True cfg) sales""" (Chart.bars (Chart.withValues True cfg) sales)
+    , ex "Line chart" "A value per category, with markers. Negative values dip below the baseline." [ tempsD ] """Chart.line cfg temps""" (Chart.line cfg temps)
+    , ex "Area chart" "A line with the region down to the baseline filled." [ salesD ] """Chart.area (Chart.withColor "#0f9d58" cfg) sales""" (Chart.area (Chart.withColor "#0f9d58" cfg) sales)
+    , ex "Scatter plot" "Raw (x, y) points, each axis scaled to its own data." [ cloudD ] """Chart.scatter cfg cloud""" (Chart.scatter cfg cloud)
+    , ex "Multi-series" "Several named series, each in a palette colour, with a legend." [ wavesSrc ] """Chart.multiLine cfg waves""" (Chart.multiLine cfg waves)
+    , ex "Bump chart" "Each series' rank per period, connected — how an ordering shifts over time." [ def "league" (listOf slf league) ] """Chart.bump cfg league""" (Chart.bump cfg league)
+    , ex "Show / hide series" "Hide series by name (dimmed in the legend) — drive a clickable legend from your model." [ wavesSrc ] """Chart.multiLine (Chart.withHidden [ "cos" ] cfg) waves""" (Chart.multiLine (Chart.withHidden [ "cos" ] cfg) waves)
+    , ex "Stacked area" "Named series stacked into translucent filled bands." [ bandsSrc ] """Chart.stackedArea cfg bands""" (Chart.stackedArea cfg bands)
+    , ex "Streamgraph" "The same series flowing around a centred baseline." [ bandsSrc ] """Chart.streamgraph cfg bands""" (Chart.streamgraph cfg bands)
+    , ex "Legend placement" "Move the legend to any corner — or hide it with NoLegend." [ wavesSrc ] """Chart.multiLine (Chart.withLegend Chart.BottomLeft cfg) waves""" (Chart.multiLine (Chart.withLegend Chart.BottomLeft cfg) waves)
+    , ex "Legend row + title" "A horizontal legend with a heading." [ wavesSrc ] """Chart.multiLine (Chart.withLegendTitle "Series" (Chart.withLegendRow True (Chart.withLegend Chart.TopLeft cfg))) waves""" (Chart.multiLine (Chart.withLegendTitle "Series" (Chart.withLegendRow True (Chart.withLegend Chart.TopLeft cfg))) waves)
+    , ex "Stacked bars" "Each category split into stacked, colour-keyed segments." [ revenueD ] """Chart.stackedBars cfg revenue""" (Chart.stackedBars cfg revenue)
+    , ex "Grouped bars" "The same data as side-by-side bars per category." [ revenueD ] """Chart.groupedBars cfg revenue""" (Chart.groupedBars cfg revenue)
+    , ex "100% stacked" "Each category normalised to 100% — compares composition, not totals." [ revenueD ] """Chart.percentBars cfg revenue""" (Chart.percentBars cfg revenue)
+    , ex "Pareto" "Sorted bars with a cumulative-% line on a right axis — the 80/20 view." [ def "defects" (listOf sf defects) ] """Chart.pareto cfg defects""" (Chart.pareto cfg defects)
+    , ex "Pie chart" "Slices sized by value, summing to the whole." [ shareD ] """Chart.pie cfg share""" (Chart.pie cfg share)
+    , ex "Custom palette" "Bring your own series colours with Chart.withPalette." [ shareD ] """Chart.pie (Chart.withPalette [ "#264653", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51" ] cfg) share""" (Chart.pie (Chart.withPalette [ "#264653", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51" ] cfg) share)
+    , ex "Gradient fills" "Vertical gradient fills on bars, areas and slices." [ salesD ] """Chart.bars (Chart.withGradient True cfg) sales""" (Chart.bars (Chart.withGradient True cfg) sales)
+    , ex "Plot panel & border" "A panel behind the data and a border around the plot area." [ tempsD ] """Chart.line (Chart.withPlotBackground "#f5f7fb" (Chart.withBorder "#c2ccdc" cfg)) temps""" (Chart.line (Chart.withPlotBackground "#f5f7fb" (Chart.withBorder "#c2ccdc" cfg)) temps)
+    , ex "Donut chart" "A pie with a hole — set by Chart.withInner." [ shareD ] """Chart.donut (Chart.withInner 0.6 cfg) share""" (Chart.donut (Chart.withInner 0.6 cfg) share)
+    , ex "Funnel" "Narrowing stages for a conversion flow; hover for share of the first." [ def "funnelData" (listOf sf funnelData) ] """Chart.funnel cfg funnelData""" (Chart.funnel cfg funnelData)
+    , ex "Polar area" "Equal-angle slices with radius by value — a Nightingale rose." [ def "winds" (listOf sf winds) ] """Chart.rose cfg winds""" (Chart.rose cfg winds)
+    , ex "Radial bars" "Concentric arcs, one ring per category, sweep by value." [ shareD ] """Chart.radialBars cfg share""" (Chart.radialBars cfg share)
+    , ex "Horizontal bars" "Categories down the left, values across — good for long labels and rankings." [ def "languages" (listOf sf languages) ] """Chart.hbars cfg languages""" (Chart.hbars cfg languages)
+    , ex "Bubble chart" "A third dimension as bubble area, coloured along a sequential ramp. Hover for values." [ def "planets" (listOf fff planets) ] """Chart.bubble cfg planets""" (Chart.bubble cfg planets)
+    , ex "Histogram" "A raw list of numbers binned into a distribution." [ scoresD ] """Chart.histogram cfg scores""" (Chart.histogram cfg scores)
+    , ex "Density" "A smooth kernel-density curve — the continuous companion to a histogram." [ scoresD ] """Chart.density cfg scores""" (Chart.density cfg scores)
+    , ex "Radar chart" "Several series compared across shared axes." [ def "radarAxes" (listOf qt radarAxes), def "squads" (listOf slf squads) ] """Chart.radar cfg radarAxes squads""" (Chart.radar cfg radarAxes squads)
+    , ex "Smooth line" "The same line, smoothed with a Catmull-Rom curve." [ tempsD ] """Chart.line (Chart.withCurve True cfg) temps""" (Chart.line (Chart.withCurve True cfg) temps)
+    , ex "Stepped line" "A stair step — for values that hold then jump." [ tempsD ] """Chart.line (Chart.withStep True cfg) temps""" (Chart.line (Chart.withStep True cfg) temps)
+    , ex "Mark styling" "Tune typography, line weight and marker size." [ tempsD ] """Chart.line (Chart.withStroke 3.5 (Chart.withDots 5 (Chart.withFont "Georgia, serif" 11 cfg))) temps""" (Chart.line (Chart.withStroke 3.5 (Chart.withDots 5 (Chart.withFont "Georgia, serif" 11 cfg))) temps)
+    , ex "Box plots" "Quartiles, median and whiskers per sample, from the tested Stat module." [ def "samples" (listOf slf samples) ] """Chart.boxplot cfg samples""" (Chart.boxplot cfg samples)
+    , ex "Candlestick" "Open/high/low/close — up days green, down days red." [ def "ohlc" (listOf ohlcT ohlc) ] """Chart.candlestick cfg ohlc""" (Chart.candlestick cfg ohlc)
+    , ex "Heatmap" "A grid shaded along a colour ramp; hover for values." [ heatColsD, heatRowsD, heatValsD ] """Chart.heatmap cfg heatCols heatRows heatVals""" (Chart.heatmap cfg heatCols heatRows heatVals)
+    , ex "Custom colour scale" "Set the sequential ramp for heatmaps, bubbles and bullets." [ heatColsD, heatRowsD, heatValsD ] """Chart.heatmap (Chart.withColorScale "#fff5eb" "#d94801" cfg) heatCols heatRows heatVals""" (Chart.heatmap (Chart.withColorScale "#fff5eb" "#d94801" cfg) heatCols heatRows heatVals)
+    , ex "Treemap" "Nested rectangles sized by value, tiled by the Layout module." [ def "teams" (listOf sf teams) ] """Chart.treemap cfg teams""" (Chart.treemap cfg teams)
+    , ex "Gantt" "Task bars spanning their start–end on a shared time axis." [ def "schedule" (listOf sff schedule) ] """Chart.gantt cfg schedule""" (Chart.gantt cfg schedule)
+    , ex "Trend line" "A least-squares regression line over the points." [ cloudD ] """Chart.scatter (Chart.withTrend True cfg) cloud""" (Chart.scatter (Chart.withTrend True cfg) cloud)
+    , ex "Error bars" "Points with a vertical y ± error whisker each." [ def "measured" (listOf fff measured) ] """Chart.scatterErr cfg measured""" (Chart.scatterErr cfg measured)
+    , ex "Reference marks" "A target line and a tolerance band behind the data." [ salesD ] """Chart.bars (Chart.withRefLine 160 "goal" (Chart.withRefBand 150 175 "ok" cfg)) sales""" (Chart.bars (Chart.withRefLine 160 "goal" (Chart.withRefBand 150 175 "ok" cfg)) sales)
+    , ex "Sparkline" "A tiny, axis-less line for inline use." [ def "trail" (listOf nm trail) ] """Chart.sparkline (Chart.sized 220 52) trail""" (Chart.sparkline (Chart.sized 220 52) trail)
+    , ex "Waterfall" "Floating bars bridge a start value to an end through up/down contributions." [ def "cashflow" (listOf sf cashflow) ] """Chart.waterfall cfg cashflow""" (Chart.waterfall cfg cashflow)
+    , ex "Gauge" "A single headline value as a dial — for KPIs on a dashboard." [] """Chart.gauge cfg 0 100 72""" (Chart.gauge cfg 0 100 72)
+    , ex "Bullet" "A compact KPI: measure bar over qualitative bands with a target tick." [] """Chart.bullet cfg { value = 72, target = 85, max = 100, bands = [ 50, 75 ] }""" (Chart.bullet cfg { value = 72, target = 85, max = 100, bands = [ 50, 75 ] })
+    , ex "Lollipop" "Stems topped with dots — a lighter alternative to bars." [ salesD ] """Chart.lollipop cfg sales""" (Chart.lollipop cfg sales)
+    , ex "Slope chart" "Value or rank changes between two periods — green up, red down." [ def "ranks" (listOf sff ranks) ] """Chart.slope cfg "2019" "2024" ranks""" (Chart.slope cfg "2019" "2024" ranks)
+    , ex "Dumbbell" "A low–high range per category, as two connected dots." [ def "ranges" (listOf sff ranges) ] """Chart.dumbbell cfg ranges""" (Chart.dumbbell cfg ranges)
+    , ex "Population pyramid" "Back-to-back bars comparing two groups across categories." [ def "ages" (listOf sff ages) ] """Chart.pyramid cfg "Male" "Female" ages""" (Chart.pyramid cfg "Male" "Female" ages)
+    , ex "Formatted axis" "Number formatting on ticks and value labels — money, percent, compact k/M." [ salesD ] """Chart.bars (Chart.withFormat (Format.prefixed "$" (Format.decimals 0)) (Chart.withValues True cfg)) sales""" (Chart.bars (Chart.withFormat (Format.prefixed "$" (Format.decimals 0)) (Chart.withValues True cfg)) sales)
+    , ex "Pinned axis" "A fixed Y domain and tick count, instead of fitting to the data." [ tempsD ] """Chart.line (Chart.withYTicks 5 (Chart.withYDomain -10 15 cfg)) temps""" (Chart.line (Chart.withYTicks 5 (Chart.withYDomain -10 15 cfg)) temps)
+    , ex "Titled & dark" "Chart and axis titles, on the dark theme — Chart.darken keeps the slider size." [ salesD ] """Chart.bars (Chart.withTitle "Sales" (Chart.withAxisTitles "month" "" (Chart.darken cfg))) sales""" (Chart.bars (Chart.withTitle "Sales" (Chart.withAxisTitles "month" "" (Chart.darken cfg))) sales)
+    ]
 
 
-card : String -> String -> String -> Html msg -> Html msg
-card title snippet note chart =
-    div [ HA.class "es-card" ]
-        [ h3 [] [ text title ]
-        , div [ HA.class "es-chart-box" ] [ chart ]
-        , pre [ HA.class "es-code" ] [ code [] [ text snippet ] ]
-        , p [ HA.class "es-note" ] [ text note ]
-        ]
+
+-- CODE ASSEMBLY --------------------------------------------------------------
+
+
+ex : String -> String -> List String -> String -> Html msg -> Example msg
+ex title note datas call view =
+    let
+        imports =
+            if String.contains "Format." call then
+                "import Chart\nimport Format\n\n\n"
+
+            else
+                "import Chart\n\n\n"
+
+        dataBlock =
+            if List.isEmpty datas then
+                ""
+
+            else
+                String.join "\n\n\n" datas ++ "\n\n\n"
+
+        cfgBlock =
+            if String.contains "cfg" call then
+                "cfg =\n    Chart.sized 380 209\n\n\n"
+
+            else
+                ""
+    in
+    { title = title
+    , note = note
+    , code = imports ++ dataBlock ++ cfgBlock ++ "chart =\n    " ++ call
+    , view = view
+    }
+
+
+def : String -> String -> String
+def name body =
+    name ++ " =\n    " ++ body
+
+
+wavesSrc : String
+wavesSrc =
+    """waves =
+    [ ( "sin", List.map (\\i -> ( toFloat i, sin (toFloat i / 3) * 4 + 5 )) (List.range 0 24) )
+    , ( "cos", List.map (\\i -> ( toFloat i, cos (toFloat i / 3) * 3 + 5 )) (List.range 0 24) )
+    ]"""
+
+
+bandsSrc : String
+bandsSrc =
+    """bands =
+    [ ( "organic", List.map (\\i -> ( toFloat i, 3 + sin (toFloat i / 4) * 1.5 )) (List.range 0 12) )
+    , ( "paid", List.map (\\i -> ( toFloat i, 2 + cos (toFloat i / 5) )) (List.range 0 12) )
+    , ( "referral", List.map (\\i -> ( toFloat i, 1.2 + sin (toFloat i / 3) * 0.6 )) (List.range 0 12) )
+    ]"""
+
+
+
+-- VALUE → ELM SOURCE ---------------------------------------------------------
+
+
+qt : String -> String
+qt s =
+    "\"" ++ s ++ "\""
+
+
+nm : Float -> String
+nm f =
+    if toFloat (round f) == f && abs f < 1.0e12 then
+        String.fromInt (round f)
+
+    else
+        String.fromFloat f
+
+
+brk : List String -> String
+brk items =
+    "[ " ++ String.join ", " items ++ " ]"
+
+
+listOf : (a -> String) -> List a -> String
+listOf f xs =
+    brk (List.map f xs)
+
+
+sf : ( String, Float ) -> String
+sf ( a, b ) =
+    "( " ++ qt a ++ ", " ++ nm b ++ " )"
+
+
+ff : ( Float, Float ) -> String
+ff ( a, b ) =
+    "( " ++ nm a ++ ", " ++ nm b ++ " )"
+
+
+fff : ( Float, Float, Float ) -> String
+fff ( a, b, c ) =
+    "( " ++ nm a ++ ", " ++ nm b ++ ", " ++ nm c ++ " )"
+
+
+sff : ( String, Float, Float ) -> String
+sff ( a, b, c ) =
+    "( " ++ qt a ++ ", " ++ nm b ++ ", " ++ nm c ++ " )"
+
+
+ohlcT : ( String, Float, Float, Float, Float ) -> String
+ohlcT ( a, o, h, l, c ) =
+    "( " ++ qt a ++ ", " ++ nm o ++ ", " ++ nm h ++ ", " ++ nm l ++ ", " ++ nm c ++ " )"
+
+
+slf : ( String, List Float ) -> String
+slf ( a, bs ) =
+    "( " ++ qt a ++ ", " ++ listOf nm bs ++ " )"
+
+
+slsf : ( String, List ( String, Float ) ) -> String
+slsf ( a, bs ) =
+    "( " ++ qt a ++ ", " ++ listOf sf bs ++ " )"
+
+
+heatColsD : String
+heatColsD =
+    def "heatCols" (listOf qt heatCols)
+
+
+heatRowsD : String
+heatRowsD =
+    def "heatRows" (listOf qt heatRows)
+
+
+heatValsD : String
+heatValsD =
+    def "heatVals" (listOf (\r -> listOf nm r) heatVals)

@@ -4,7 +4,9 @@ A small, **dependency-free SVG library** in Elm, for the
 [elm-lang](https://github.com/tunguski/elm-lang) compiler: dozens of **chart** types over plain
 data ([`Chart`](src/Chart.elm)), plus a general-purpose **drawing** toolkit — shapes, paths,
 transforms, SMIL animation and interactivity ([`Draw`](src/Draw.elm) / [`Path`](src/Path.elm) /
-[`Animate`](src/Animate.elm)). The live site's landing has two tabs, **Charts** and **Drawings**.
+[`Animate`](src/Animate.elm)). The live site's landing has two tabs, **Charts** and **Drawings**;
+click any example to see it large alongside the complete, self-contained Elm source (data, config
+and all) that reproduces it.
 
 Live site: **https://tunguski.github.io/elm-svg/** — a small **workspace** where you create and
 manage your own charts (saved in your browser): name / open / search / copy / delete them, set
