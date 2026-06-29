@@ -21,6 +21,7 @@ Chart.area Chart.defaults sales           -- a line, filled to the baseline
 Chart.hbars Chart.defaults ranking      -- horizontal bars (long labels / rankings)
 Chart.lollipop Chart.defaults sales     -- stems topped with dots (a lighter bar)
 Chart.histogram Chart.defaults numbers  -- bins a raw List Float into a distribution
+Chart.density Chart.defaults numbers    -- smooth kernel-density curve of a List Float
 Chart.boxplot Chart.defaults samples    -- List ( String, List Float ) — quartiles + whiskers
 Chart.waterfall Chart.defaults steps    -- (label, delta) bridge bars to a running total
 Chart.gauge Chart.defaults 0 100 72     -- a single KPI value as a dial
@@ -31,6 +32,7 @@ Chart.sparkline (Chart.sized 200 48) ys -- a tiny, axis-less inline line
 Chart.pie Chart.defaults share
 Chart.donut (Chart.withInner 0.6 Chart.defaults) share
 Chart.rose Chart.defaults winds           -- polar area (Nightingale rose): radius by value
+Chart.radialBars Chart.defaults share     -- concentric arc bars, sweep by value
 Chart.funnel Chart.defaults stages        -- narrowing conversion stages
 Chart.treemap Chart.defaults parts        -- nested rectangles, area by value
 
@@ -40,9 +42,12 @@ Chart.scatterErr Chart.defaults xyerr     -- List ( Float, Float, Float ) — y 
 Chart.bubble Chart.defaults xysize        -- List ( Float, Float, Float ) — area = size
 Chart.multiLine Chart.defaults serieses   -- List ( String, List (Float, Float) ), with a legend
 Chart.stackedArea Chart.defaults serieses
+Chart.streamgraph Chart.defaults serieses -- stack flowing around a centred baseline
 Chart.radar Chart.defaults axes serieses  -- spider chart over shared axes
+Chart.bump Chart.defaults league          -- List ( String, List Float ) — rank per period
 Chart.slope Chart.defaults "2019" "2024" ranks  -- (label, before, after) two-period change
 Chart.dumbbell Chart.defaults ranges      -- (label, low, high) range per category
+Chart.pyramid Chart.defaults "M" "F" ages -- back-to-back (label, left, right) bars
 
 -- segmented bars: List ( String, List ( String, Float ) ) — (category, [(series, value)])
 Chart.stackedBars Chart.defaults revenue
@@ -66,6 +71,8 @@ native `<title>` **hover tooltip** (no Elm state). Line and area series can be *
 (`Chart.withCurve True`) or **stepped** (`Chart.withStep True`); add **reference lines and bands**
 (`Chart.withRefLine` / `Chart.withRefBand`), a scatter **trend line** (`Chart.withTrend True`), or
 custom **number formatting** for the axis and value labels (`Chart.withFormat Format.percent`). The
+axis and legend are tunable too — `withYDomain` / `withYTicks` / `withMargins` and `withLegend`
+(any corner, or `NoLegend`). The
 number-crunching — domain→pixel mapping (linear or **log**), bounds and ticks, number/coordinate
 formatting, slicing a circle, binning a sample, blending colours, spline smoothing, quartiles and
 least-squares fits — lives in separate, fully unit-tested [`Scale`](src/Scale.elm),
@@ -96,20 +103,21 @@ Chart.sized 460 260
   `ringPoints` (slices → polygon point-lists). Also pure and tested.
 - **`Curve`** — `smooth` / `catmullRom`: a point list → a smooth spline sampled as points (so a
   plain `<polyline>` renders the curve). Pure and tested.
-- **`Stat`** — `mean` / `median` / `quantile` / `quartiles` / `stdDev` / `linearRegression`: the
-  summary stats behind box plots and trend lines. Pure and tested.
+- **`Stat`** — `mean` / `median` / `quantile` / `quartiles` / `stdDev` / `linearRegression` / `kde`:
+  the summary stats behind box plots, trend lines and density curves. Pure and tested.
 - **`Format`** — `decimals` / `percent` / `compact` / `prefixed` / `suffixed`: ready-made
   `Float -> String` formatters for `Chart.withFormat`. Pure and tested.
 - **`Layout`** — `treemap`: tiles a box into value-proportional rectangles by recursive binary
   slicing. Pure and tested.
-- **`Chart`** — ~30 chart types over plain Elm data: `bars`, `hbars`, `lollipop`, `line`, `area`,
-  `scatter`, `scatterErr`, `bubble`, `multiLine`, `slope`, `dumbbell`, `stackedArea`, `stackedBars`,
-  `groupedBars`, `percentBars`, `pareto`, `histogram`, `pie`, `donut`, `radar`, `funnel`, `rose`,
-  `boxplot`, `candlestick`, `heatmap`, `sparkline`, `waterfall`, `gauge`, `bullet`, `treemap`,
-  `gantt`; the `Config` theme/annotation constructors (`sized`, `darken`, `withColor`, `withGrid`,
-  `withValues`, `withTitle`, `withAxisTitles`, `withInner`, `withCurve`, `withStep`, `withTrend`,
-  `withFormat`, `withTips`, `withRefLine`, `withRefBand`); and the building blocks (`frame`, `xAxis`,
-  `legend`, `polylineOf`, `dotsOf`) for bespoke charts.
+- **`Chart`** — ~37 chart types over plain Elm data: `bars`, `hbars`, `lollipop`, `line`, `area`,
+  `scatter`, `scatterErr`, `bubble`, `multiLine`, `slope`, `dumbbell`, `pyramid`, `bump`,
+  `stackedArea`, `streamgraph`, `stackedBars`, `groupedBars`, `percentBars`, `pareto`, `histogram`,
+  `density`, `pie`, `donut`, `radar`, `funnel`, `rose`, `radialBars`, `boxplot`, `candlestick`,
+  `heatmap`, `sparkline`, `waterfall`, `gauge`, `bullet`, `treemap`, `gantt`; the `Config`
+  theme/annotation/axis constructors (`sized`, `darken`, `withColor`, `withGrid`, `withValues`,
+  `withTitle`, `withAxisTitles`, `withInner`, `withCurve`, `withStep`, `withTrend`, `withFormat`,
+  `withTips`, `withRefLine`, `withRefBand`, `withYDomain`, `withYTicks`, `withMargins`, `withLegend`);
+  and the building blocks (`frame`, `xAxis`, `legend`, `polylineOf`, `dotsOf`) for bespoke charts.
 
 ## Gotchas it bakes in
 
