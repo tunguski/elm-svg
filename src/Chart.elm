@@ -2,7 +2,7 @@ module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
     , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
-    , RefMark, withRefLine, withRefBand
+    , RefMark, withRefLine, withRefBand, LegendPos(..), withLegend
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
     , area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
     , histogram, density, pie, donut, radar, funnel, rose, radialBars
@@ -31,7 +31,7 @@ at the call site.
 @docs Config, defaults, dark, darken, sized, colored, palette
 @docs withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
 @docs withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
-@docs RefMark, withRefLine, withRefBand
+@docs RefMark, withRefLine, withRefBand, LegendPos, withLegend
 
 
 # Charts
@@ -70,6 +70,16 @@ type alias RefMark =
     }
 
 
+{-| Where a multi-series chart's legend sits — one of the four corners, or `NoLegend` to hide it.
+Set it with [`withLegend`](#withLegend). -}
+type LegendPos
+    = TopRight
+    | TopLeft
+    | BottomRight
+    | BottomLeft
+    | NoLegend
+
+
 {-| How a chart looks: dimensions, margins, the theme colours/fonts, and a handful of toggles. -}
 type alias Config =
     { width : Float
@@ -99,6 +109,7 @@ type alias Config =
     , format : Float -> String
     , yDomain : Maybe ( Float, Float )
     , yTicks : Int
+    , legendPos : LegendPos
     , title : String
     , xTitle : String
     , yTitle : String
@@ -135,6 +146,7 @@ defaults =
     , format = Scale.num
     , yDomain = Nothing
     , yTicks = 5
+    , legendPos = TopRight
     , title = ""
     , xTitle = ""
     , yTitle = ""
@@ -264,6 +276,12 @@ withYTicks n c =
 withMargins : Float -> Float -> Float -> Float -> Config -> Config
 withMargins t r b l c =
     { c | top = t, right = r, bottom = b, left = l }
+
+
+{-| Place the legend in a chosen corner, or hide it with `NoLegend`. -}
+withLegend : LegendPos -> Config -> Config
+withLegend pos c =
+    { c | legendPos = pos }
 
 
 {-| Add a horizontal reference line at `value` (e.g. a target or threshold), labelled at the right. -}
@@ -2339,28 +2357,62 @@ titles c =
     chartTitle ++ xTitle ++ yTitle
 
 
-{-| A legend: a colour swatch and name per series, stacked at the top-right of the plot. -}
+{-| A legend: a colour swatch and name per series, placed in the corner set by
+[`withLegend`](#withLegend) (top-right by default; `NoLegend` hides it). -}
 legend : Config -> List String -> Svg msg
 legend c names =
     let
-        x =
-            c.left + plotW c - 8
+        n =
+            List.length names
+
+        lineH =
+            c.fontSize + 4
+
+        isRight =
+            c.legendPos == TopRight || c.legendPos == BottomRight
+
+        isTop =
+            c.legendPos == TopRight || c.legendPos == TopLeft
+
+        y0 =
+            if isTop then
+                c.top + 2
+
+            else
+                c.top + plotH c - toFloat n * lineH - 2
+
+        xEdge =
+            if isRight then
+                c.left + plotW c - 8
+
+            else
+                c.left + 8
 
         row i name =
             let
                 y =
-                    c.top + 2 + toFloat i * (c.fontSize + 4)
+                    y0 + toFloat i * lineH
+
+                swatchX =
+                    if isRight then
+                        xEdge - 9
+
+                    else
+                        xEdge
+
+                ( textX, anchor ) =
+                    if isRight then
+                        ( xEdge - 13, "end" )
+
+                    else
+                        ( xEdge + 13, "start" )
             in
             Svg.g []
-                [ Svg.rect
-                    [ SA.x (Scale.num (x - 9)), SA.y (Scale.num y), SA.width "9", SA.height "9", SA.fill (colorAt i) ]
-                    []
-                , Svg.text_
-                    [ SA.x (Scale.num (x - 13)), SA.y (Scale.num (y + 8)), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor "end" ]
-                    [ Svg.text (clip name) ]
+                [ Svg.rect [ SA.x (Scale.num swatchX), SA.y (Scale.num y), SA.width "9", SA.height "9", SA.fill (colorAt i) ] []
+                , Svg.text_ [ SA.x (Scale.num textX), SA.y (Scale.num (y + 8)), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor anchor ] [ Svg.text (clip name) ]
                 ]
     in
-    if List.length names <= 1 then
+    if n <= 1 || c.legendPos == NoLegend then
         Svg.text ""
 
     else
