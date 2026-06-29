@@ -220,6 +220,7 @@ view size onSize =
             , card "Donut chart" "Chart.donut (Chart.withInner 0.6 cfg) share" "A pie with a hole — set by Chart.withInner." (Chart.donut (Chart.withInner 0.6 cfg) share)
             , card "Funnel" "Chart.funnel cfg funnelData" "Narrowing stages for a conversion flow; hover for share of the first." (Chart.funnel cfg funnelData)
             , card "Polar area" "Chart.rose cfg winds" "Equal-angle slices with radius by value — a Nightingale rose." (Chart.rose cfg winds)
+            , card "Radial bars" "Chart.radialBars cfg share" "Concentric arcs, one ring per category, sweep by value." (Chart.radialBars cfg share)
             , card "Horizontal bars" "Chart.hbars cfg languages" "Categories down the left, values across — good for long labels and rankings." (Chart.hbars cfg languages)
             , card "Bubble chart" "Chart.bubble cfg planets" "A third dimension as bubble area, coloured along a sequential ramp. Hover for values." (Chart.bubble cfg planets)
             , card "Histogram" "Chart.histogram cfg scores" "A raw list of numbers binned into a distribution." (Chart.histogram cfg scores)

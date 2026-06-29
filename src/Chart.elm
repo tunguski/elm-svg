@@ -4,7 +4,7 @@ module Chart exposing
     , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
     , area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
-    , histogram, density, pie, donut, radar, funnel, rose
+    , histogram, density, pie, donut, radar, funnel, rose, radialBars
     , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
     , frame, xAxis, polylineOf, dotsOf, legend
     )
@@ -36,7 +36,7 @@ at the call site.
 
 @docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
 @docs area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
-@docs histogram, density, pie, donut, radar, funnel, rose
+@docs histogram, density, pie, donut, radar, funnel, rose, radialBars
 @docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
 
 
@@ -2034,6 +2034,48 @@ rose c data =
                 (tip c (lbl ++ ": " ++ c.format v))
     in
     root c (List.indexedMap slice data ++ [ legend c (List.map Tuple.first data) ])
+
+
+{-| A radial bar chart of `(label, value)` pairs: concentric arcs, one ring per category, each arc's
+sweep proportional to its value over a 270° track (reuses [`Arc`](Arc)). A legend names the rings. -}
+radialBars : Config -> List ( String, Float ) -> Svg msg
+radialBars c data =
+    let
+        maxV =
+            Basics.max 1.0e-9 (List.maximum (List.map Tuple.second data) |> Maybe.withDefault 1)
+
+        n =
+            List.length data
+
+        center =
+            ( c.left + plotW c / 2, c.top + plotH c / 2 )
+
+        outerR =
+            Basics.min (plotW c) (plotH c) / 2 * 0.94
+
+        unit =
+            outerR / toFloat (Basics.max 1 n)
+
+        ringW =
+            unit * 0.78
+
+        sweepMax =
+            1.5 * pi
+
+        bar i ( lbl, v ) =
+            let
+                rOuter =
+                    outerR - toFloat i * unit
+
+                rInner =
+                    rOuter - ringW
+            in
+            Svg.g []
+                [ Svg.polyline [ SA.points (Scale.pointsString (Arc.ringPoints center rInner rOuter 0 sweepMax)), SA.fill c.grid, SA.stroke "none" ] []
+                , Svg.polyline [ SA.points (Scale.pointsString (Arc.ringPoints center rInner rOuter 0 (v / maxV * sweepMax))), SA.fill (colorAt i), SA.stroke "none" ] (tip c (lbl ++ ": " ++ c.format v))
+                ]
+    in
+    root c (List.indexedMap bar data ++ [ legend c (List.map Tuple.first data) ])
 
 
 {-| A bullet chart (Stephen Few's compact KPI): a measure bar for `value` over qualitative `bands`
