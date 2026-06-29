@@ -113,8 +113,8 @@ Draw.svg 120 120
 
 ## Theming
 
-The `Config` carries a small theme. Build it through the composable constructors (never
-`{ Chart.defaults | … }` — see the gotchas below):
+The `Config` carries a small theme. Build it through the chainable constructors (or a plain
+`{ Chart.defaults | … }` record update — either works):
 
 ```elm
 Chart.sized 460 260
@@ -185,14 +185,8 @@ model, toggle it on a legend click, and re-render — the chart stays a pure fun
 
 ## Gotchas it bakes in
 
-This library targets the elm-lang JS backend, and encodes a couple of its quirks so you don't trip
-on them:
+This library targets the elm-lang JS backend. One quirk to know:
 
-- **A record update on a record alias imported from another module** isn't expressible at the call
-  site (`{ Chart.defaults | width = … }` won't parse with a qualified name). So tweak a `Config`
-  with the provided constructors — `Chart.sized w h`, `Chart.darken`, `Chart.withGrid on` — which do
-  the update *inside* `Chart`. The `with*` constructors take a `Config` and return one, so they
-  chain with `|>`.
 - **`let` bindings are evaluated in source order, without hoisting.** A binding that is built
   eagerly (e.g. `List.indexedMap …`) may not reference a *later* binding in the same `let` — at
   evaluation time that name is still `undefined` and you get a runtime `reading 'n'` crash. Define

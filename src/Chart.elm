@@ -22,10 +22,9 @@ series. Colours come from the [`Config`](#Config), applied inline (the JS backen
 in [`Scale`](Scale) and [`Arc`](Arc).
 
 The `Config` carries a small **theme** — accent colour, axis/grid/label colours, background, font,
-and toggles for gridlines, value labels and titles. Because the JS backend miscompiles a record
-update on an alias imported from another module, build a `Config` only through the constructors
-here ([`sized`](#sized), [`dark`](#dark), [`withGrid`](#withGrid), …), never `{ Chart.defaults | … }`
-at the call site.
+and toggles for gridlines, value labels and titles. Build one with the chainable constructors here
+([`sized`](#sized), [`dark`](#dark), [`withGrid`](#withGrid), …); a plain
+`{ Chart.defaults | width = … }` record update works too.
 
 
 # Config
@@ -193,17 +192,13 @@ darken c =
     }
 
 
-{-| `defaults` resized. Build config changes **here**, inside the module that owns the `Config`
-alias — the elm-lang JS backend miscompiles a record update on a record alias imported from
-another module (the un-updated fields come back `undefined`), so callers should reach for these
-constructors rather than `{ Chart.defaults | width = … }` at their own site.
--}
+{-| `defaults` resized. -}
 sized : Float -> Float -> Config
 sized w h =
     { defaults | width = w, height = h }
 
 
-{-| `defaults` with a different mark colour (see [`sized`](#sized) on why this lives here). -}
+{-| `defaults` with a different mark colour. -}
 colored : String -> Config
 colored color =
     { defaults | color = color }
