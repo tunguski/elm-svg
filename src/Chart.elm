@@ -3,7 +3,7 @@ module Chart exposing
     , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
-    , area, stackedArea, stackedBars, groupedBars, percentBars
+    , area, stackedArea, stackedBars, groupedBars, percentBars, pareto
     , histogram, pie, donut, radar, funnel
     , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt
     , frame, xAxis, polylineOf, dotsOf, legend
@@ -35,7 +35,7 @@ at the call site.
 # Charts
 
 @docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
-@docs area, stackedArea, stackedBars, groupedBars, percentBars
+@docs area, stackedArea, stackedBars, groupedBars, percentBars, pareto
 @docs histogram, pie, donut, radar, funnel
 @docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt
 
@@ -1701,6 +1701,69 @@ dumbbell c data =
             ++ [ axisLine c c.left c.top c.left (c.top + plotH c) ]
             ++ List.indexedMap row data
             ++ [ legend c [ "low", "high" ] ]
+        )
+
+
+{-| A Pareto chart of `(label, value)` pairs: bars sorted largest-first against the left axis, with
+a cumulative-percentage line against a right (0–100%) axis — the classic "80/20" view. -}
+pareto : Config -> List ( String, Float ) -> Svg msg
+pareto c data =
+    let
+        sorted =
+            List.sortBy (\( _, v ) -> -v) data
+
+        values =
+            List.map Tuple.second sorted
+
+        total =
+            Basics.max 1.0e-9 (List.sum values)
+
+        count =
+            List.length sorted
+
+        yS =
+            yScaleFor c values
+
+        yS2 =
+            Scale.linear ( 0, 100 ) ( c.top + plotH c, c.top )
+
+        slot =
+            plotW c / toFloat (Basics.max 1 count)
+
+        barW =
+            slot * 0.64
+
+        right =
+            c.left + plotW c
+
+        cumPct =
+            Tuple.first (List.foldl (\v ( acc, run ) -> ( acc ++ [ (run + v) / total * 100 ], run + v )) ( [], 0 ) values)
+
+        cxOf i =
+            c.left + slot * (toFloat i + 0.5)
+
+        bar i ( lbl, v ) =
+            Svg.g []
+                [ Svg.rect
+                    [ SA.x (Scale.num (cxOf i - barW / 2)), SA.y (Scale.num (Scale.convert yS v)), SA.width (Scale.num barW), SA.height (Scale.num (Basics.max 0.5 (Scale.convert yS 0 - Scale.convert yS v))), SA.fill c.color ]
+                    (tip c (lbl ++ ": " ++ c.format v))
+                , xLabel c count (cxOf i) lbl
+                ]
+
+        linePts =
+            List.indexedMap (\i p -> ( cxOf i, Scale.convert yS2 p )) cumPct
+
+        rightTick p =
+            Svg.text_
+                [ SA.x (Scale.num (right + 4)), SA.y (Scale.num (Scale.convert yS2 p + 3)), SA.fill (colorAt 1), SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor "start" ]
+                [ Svg.text (Scale.num p ++ "%") ]
+    in
+    root c
+        (frame c yS
+            ++ [ axisLine c right c.top right (c.top + plotH c) ]
+            ++ List.map rightTick [ 0, 25, 50, 75, 100 ]
+            ++ List.indexedMap bar sorted
+            ++ (strokeLine c (colorAt 1) linePts :: List.map (\p -> dot c (colorAt 1) c.dotR p "") linePts)
         )
 
 

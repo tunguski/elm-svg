@@ -165,6 +165,11 @@ ranges =
     [ ( "Jan", 2, 9 ), ( "Feb", 3, 11 ), ( "Mar", 6, 15 ), ( "Apr", 9, 19 ), ( "May", 13, 23 ) ]
 
 
+defects : List ( String, Float )
+defects =
+    [ ( "Scratch", 42 ), ( "Dent", 30 ), ( "Crack", 18 ), ( "Stain", 12 ), ( "Chip", 8 ), ( "Other", 5 ) ]
+
+
 {-| The gallery, at the given size, with size buttons that send `onSize`. -}
 view : Float -> (Float -> msg) -> Html msg
 view size onSize =
@@ -189,6 +194,7 @@ view size onSize =
             , card "Stacked bars" "Chart.stackedBars cfg revenue" "Each category split into stacked, colour-keyed segments." (Chart.stackedBars cfg revenue)
             , card "Grouped bars" "Chart.groupedBars cfg revenue" "The same data as side-by-side bars per category." (Chart.groupedBars cfg revenue)
             , card "100% stacked" "Chart.percentBars cfg revenue" "Each category normalised to 100% — compares composition, not totals." (Chart.percentBars cfg revenue)
+            , card "Pareto" "Chart.pareto cfg defects" "Sorted bars with a cumulative-% line on a right axis — the 80/20 view." (Chart.pareto cfg defects)
             , card "Pie chart" "Chart.pie cfg share" "Slices sized by value, summing to the whole." (Chart.pie cfg share)
             , card "Donut chart" "Chart.donut (Chart.withInner 0.6 cfg) share" "A pie with a hole — set by Chart.withInner." (Chart.donut (Chart.withInner 0.6 cfg) share)
             , card "Funnel" "Chart.funnel cfg funnelData" "Narrowing stages for a conversion flow; hover for share of the first." (Chart.funnel cfg funnelData)
