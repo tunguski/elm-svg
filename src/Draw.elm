@@ -19,8 +19,7 @@ of them onto a [`svg`](#svg) canvas:
         ]
 
 Shapes carry plain SVG attributes, so they compose with [`Path`](Path) for curves, [`Animate`](Animate)
-for motion (via [`withChild`](#withChild)), and the event handlers here for interactivity. Colours
-are inline (the backend doesn't bind `class`).
+for motion (via [`withChild`](#withChild)), and the event handlers here for interactivity.
 
 @docs Shape, svg, toSvg, group
 @docs rect, square, circle, ellipse, line, polygon, polyline, path, text

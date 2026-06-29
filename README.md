@@ -185,28 +185,27 @@ model, toggle it on a legend click, and re-render — the chart stays a pure fun
 
 ## Gotchas it bakes in
 
-This library targets the elm-lang JS backend, and encodes a few of its quirks so you don't trip
+This library targets the elm-lang JS backend, and encodes a couple of its quirks so you don't trip
 on them:
 
-- **Several `Svg.Attributes` are unbound** — `class` (so no CSS classes; every colour is set
-  **inline** from the [`Config`](src/Chart.elm)) and also `id` / `offset` / `stop-color` /
-  `stop-opacity`. The gradient `<defs>` therefore set those through the generic, bound
-  `Html.Attributes.attribute "name" value` escape hatch, which works on SVG nodes.
-- **A record update on a record alias imported from another module miscompiles** (the un-updated
-  fields come back `undefined`). So tweak a `Config` with the provided constructors —
-  `Chart.sized w h`, `Chart.darken`, `Chart.withGrid on` — which do the update *inside* `Chart`,
-  rather than `{ Chart.defaults | width = … }` at your own call site. The `with*` constructors take
-  a `Config` and return one, so they chain with `|>`.
+- **A record update on a record alias imported from another module** isn't expressible at the call
+  site (`{ Chart.defaults | width = … }` won't parse with a qualified name). So tweak a `Config`
+  with the provided constructors — `Chart.sized w h`, `Chart.darken`, `Chart.withGrid on` — which do
+  the update *inside* `Chart`. The `with*` constructors take a `Config` and return one, so they
+  chain with `|>`.
 - **`let` bindings are evaluated in source order, without hoisting.** A binding that is built
   eagerly (e.g. `List.indexedMap …`) may not reference a *later* binding in the same `let` — at
   evaluation time that name is still `undefined` and you get a runtime `reading 'n'` crash. Define
   helpers **above** the bindings that use them.
 
-What **does** work, and the drawing toolkit leans on: the `<path>` element and its `d` attribute,
-`transform` and `opacity`, the SMIL elements (`<animate>`/`<animateTransform>`), and
-`Html.Events.*` handlers (e.g. `onClick`) on SVG nodes — there is no separate `Svg.Events`. Pie,
-donut and radar areas are still drawn as filled `<polyline>`s (closed under `fill`) since that
-predates the `<path>` support and renders identically.
+The SVG surface the library relies on is well-bound: shapes and `<path>`+`d`, `transform`,
+`opacity`, `class`, `id` and the gradient family (`<linearGradient>`/`<stop>` with `offset` /
+`stop-color` / `stop-opacity`), the SMIL elements (`<animate>`/`<animateTransform>`), and
+`Html.Events.*` handlers (e.g. `onClick`) on SVG nodes — there is no separate `Svg.Events`. The one
+gap is the **SMIL animation attributes** (`attributeName` / `from` / `to` / `dur` / `begin` / …),
+which aren't bound as `Svg.Attributes`, so [`Animate`](src/Animate.elm) sets them through the
+generic, bound `Html.Attributes.attribute "name" value` escape hatch. (Pie/donut/radar areas are
+still filled `<polyline>`s — that predates `<path>` support and renders identically.)
 
 ## Use it in another project
 

@@ -54,7 +54,6 @@ at the call site.
 
 import Arc
 import Curve
-import Html.Attributes as HA
 import Layout
 import Scale exposing (Scale)
 import Stat
@@ -492,8 +491,8 @@ stepped pts =
 
 root : Config -> List (Svg msg) -> Svg msg
 root c children =
-    -- NB: Svg.Attributes.class is unbound in the elm-lang JS backend, so SVG nodes carry no
-    -- classes — every colour is set inline via the Config. Width/height give the svg its size.
+    -- Colours are set inline from the Config so a chart is configured through this API rather than
+    -- external CSS (the backend now binds Svg.Attributes.class, but inline keeps charts self-styled).
     Svg.svg
         [ SA.viewBox ("0 0 " ++ Scale.num c.width ++ " " ++ Scale.num c.height)
         , SA.width (Scale.num c.width)
@@ -540,12 +539,10 @@ gradientDefs c =
                     (c.color :: c.palette)
 
             grad colour =
-                -- NB: id/offset/stop-color/stop-opacity are not bound as Svg.Attributes in this
-                -- backend, so they go through the generic Html.Attributes.attribute escape hatch.
                 Svg.linearGradient
-                    [ HA.attribute "id" (gradId colour), SA.x1 "0", SA.y1 "0", SA.x2 "0", SA.y2 "1" ]
-                    [ Svg.stop [ HA.attribute "offset" "0", HA.attribute "stop-color" colour, HA.attribute "stop-opacity" "0.95" ] []
-                    , Svg.stop [ HA.attribute "offset" "1", HA.attribute "stop-color" colour, HA.attribute "stop-opacity" "0.3" ] []
+                    [ SA.id (gradId colour), SA.x1 "0", SA.y1 "0", SA.x2 "0", SA.y2 "1" ]
+                    [ Svg.stop [ SA.offset "0", SA.stopColor colour, SA.stopOpacity "0.95" ] []
+                    , Svg.stop [ SA.offset "1", SA.stopColor colour, SA.stopOpacity "0.3" ] []
                     ]
         in
         [ Svg.defs [] (List.map grad colours) ]
