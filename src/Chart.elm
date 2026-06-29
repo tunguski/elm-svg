@@ -4,7 +4,7 @@ module Chart exposing
     , withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withFont, withDots, withStroke
     , withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
-    , RefMark, withRefLine, withRefBand, LegendPos(..), withLegend
+    , RefMark, withRefLine, withRefBand, LegendPos(..), withLegend, withHidden
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
     , area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
     , histogram, density, pie, donut, radar, funnel, rose, radialBars
@@ -35,7 +35,7 @@ at the call site.
 @docs withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
 @docs withFont, withDots, withStroke
 @docs withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
-@docs RefMark, withRefLine, withRefBand, LegendPos, withLegend
+@docs RefMark, withRefLine, withRefBand, LegendPos, withLegend, withHidden
 
 
 # Charts
@@ -119,6 +119,7 @@ type alias Config =
     , format : Float -> String
     , yDomain : Maybe ( Float, Float )
     , yTicks : Int
+    , hidden : List String
     , legendPos : LegendPos
     , title : String
     , xTitle : String
@@ -161,6 +162,7 @@ defaults =
     , format = Scale.num
     , yDomain = Nothing
     , yTicks = 5
+    , hidden = []
     , legendPos = TopRight
     , title = ""
     , xTitle = ""
@@ -361,6 +363,15 @@ withMargins t r b l c =
 withLegend : LegendPos -> Config -> Config
 withLegend pos c =
     { c | legendPos = pos }
+
+
+{-| Hide the named series from the plot while keeping them (dimmed) in the legend. Drive a clickable,
+toggling legend from your own model: keep a list of hidden names in state and pass it here — the
+chart stays a pure function of that state. Applies to the overlay multi-series charts (multi-line,
+bump, radar). -}
+withHidden : List String -> Config -> Config
+withHidden names c =
+    { c | hidden = names }
 
 
 {-| Add a horizontal reference line at `value` (e.g. a target or threshold), labelled at the right. -}
@@ -726,8 +737,12 @@ multiLine c serieses =
         place pts =
             List.map (\( x, y ) -> ( Scale.convert xS x, Scale.convert yS y )) pts
 
-        draw i ( _, pts ) =
-            strokeLine c (colorAt c i) (curved c (place pts))
+        draw i ( name, pts ) =
+            if List.member name c.hidden then
+                Svg.text ""
+
+            else
+                strokeLine c (colorAt c i) (curved c (place pts))
     in
     root c
         (frame c yS
@@ -1336,11 +1351,15 @@ bump c serieses =
             Scale.linear ( 1, toFloat (Basics.max 1 nSeries) ) ( c.top, c.top + plotH c )
 
         seriesLine si name =
-            let
-                pts =
-                    List.map (\j -> ( Scale.convert xS (toFloat j), Scale.convert yS (toFloat (rankOf si j)) )) (List.range 0 (periods - 1))
-            in
-            strokeLine c (colorAt c si) pts :: List.map (\p -> dot c (colorAt c si) (c.dotR * 1.5) p name) pts
+            if List.member name c.hidden then
+                []
+
+            else
+                let
+                    pts =
+                        List.map (\j -> ( Scale.convert xS (toFloat j), Scale.convert yS (toFloat (rankOf si j)) )) (List.range 0 (periods - 1))
+                in
+                strokeLine c (colorAt c si) pts :: List.map (\p -> dot c (colorAt c si) (c.dotR * 1.5) p name) pts
 
         periodLabels =
             List.map (\j -> valueLabel c (Scale.convert xS (toFloat j)) (c.top + plotH c + 13) (String.fromInt (j + 1))) (List.range 0 (periods - 1))
@@ -1402,8 +1421,12 @@ radar c axes serieses =
                 )
                 axes
 
-        poly i ( _, vals ) =
-            Svg.polyline
+        poly i ( name, vals ) =
+            if List.member name c.hidden then
+                Svg.text ""
+
+            else
+                Svg.polyline
                 [ SA.points (Scale.pointsString (closeLoop (List.indexedMap (\j v -> Arc.pointOnCircle center (radius * (Basics.max 0 v / maxV)) (angleOf j)) vals)))
                 , SA.fill (fillC c (colorAt c i))
                 , SA.fillOpacity "0.12"
@@ -2556,7 +2579,15 @@ legend c names =
                     else
                         ( xEdge + 13, "start" )
             in
-            Svg.g []
+            Svg.g
+                [ SA.opacity
+                    (if List.member name c.hidden then
+                        "0.35"
+
+                     else
+                        "1"
+                    )
+                ]
                 [ Svg.rect [ SA.x (Scale.num swatchX), SA.y (Scale.num y), SA.width "9", SA.height "9", SA.fill (fillC c (colorAt c i)) ] []
                 , Svg.text_ [ SA.x (Scale.num textX), SA.y (Scale.num (y + 8)), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor anchor ] [ Svg.text (clip name) ]
                 ]

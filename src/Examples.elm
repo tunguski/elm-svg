@@ -210,6 +210,7 @@ view size onSize =
             , card "Scatter plot" "Chart.scatter cfg cloud" "Raw (x, y) points, each axis scaled to its own data." (Chart.scatter cfg cloud)
             , card "Multi-series" "Chart.multiLine cfg waves" "Several named series, each in a palette colour, with a legend." (Chart.multiLine cfg waves)
             , card "Bump chart" "Chart.bump cfg league" "Each series' rank per period, connected — how an ordering shifts over time." (Chart.bump cfg league)
+            , card "Show / hide series" "Chart.multiLine (Chart.withHidden [ \"cos\" ] cfg) waves" "Hide series by name (dimmed in the legend) — drive a clickable legend from your model." (Chart.multiLine (Chart.withHidden [ "cos" ] cfg) waves)
             , card "Stacked area" "Chart.stackedArea cfg bands" "Named series stacked into translucent filled bands." (Chart.stackedArea cfg bands)
             , card "Streamgraph" "Chart.streamgraph cfg bands" "The same series flowing around a centred baseline." (Chart.streamgraph cfg bands)
             , card "Legend placement" "Chart.multiLine (Chart.withLegend Chart.BottomLeft cfg) waves" "Move the legend to any corner — or hide it with NoLegend." (Chart.multiLine (Chart.withLegend Chart.BottomLeft cfg) waves)
