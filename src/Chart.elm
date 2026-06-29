@@ -4,7 +4,7 @@ module Chart exposing
     , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
     , area, stackedArea, stackedBars, groupedBars, percentBars, pareto
-    , histogram, pie, donut, radar, funnel
+    , histogram, pie, donut, radar, funnel, rose
     , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt
     , frame, xAxis, polylineOf, dotsOf, legend
     )
@@ -36,7 +36,7 @@ at the call site.
 
 @docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell
 @docs area, stackedArea, stackedBars, groupedBars, percentBars, pareto
-@docs histogram, pie, donut, radar, funnel
+@docs histogram, pie, donut, radar, funnel, rose
 @docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt
 
 
@@ -1765,6 +1765,47 @@ pareto c data =
             ++ List.indexedMap bar sorted
             ++ (strokeLine c (colorAt 1) linePts :: List.map (\p -> dot c (colorAt 1) c.dotR p "") linePts)
         )
+
+
+{-| A polar-area (rose / Nightingale) chart of `(label, value)` slices: equal angles, but each
+slice's **radius** tracks its value. A legend names the slices. -}
+rose : Config -> List ( String, Float ) -> Svg msg
+rose c data =
+    let
+        maxV =
+            Basics.max 1.0e-9 (List.maximum (List.map Tuple.second data) |> Maybe.withDefault 1)
+
+        n =
+            List.length data
+
+        center =
+            ( c.left + plotW c / 2, c.top + plotH c / 2 )
+
+        maxR =
+            Basics.min (plotW c) (plotH c) / 2 * 0.9
+
+        step =
+            if n == 0 then
+                Arc.tau
+
+            else
+                Arc.tau / toFloat n
+
+        slice i ( lbl, v ) =
+            let
+                start =
+                    step * toFloat i
+            in
+            Svg.polyline
+                [ SA.points (Scale.pointsString (Arc.wedgePoints center (maxR * (v / maxV)) start (start + step)))
+                , SA.fill (colorAt i)
+                , SA.fillOpacity "0.75"
+                , SA.stroke c.background
+                , SA.strokeWidth "1"
+                ]
+                (tip c (lbl ++ ": " ++ c.format v))
+    in
+    root c (List.indexedMap slice data ++ [ legend c (List.map Tuple.first data) ])
 
 
 
