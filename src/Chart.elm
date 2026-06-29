@@ -1,7 +1,8 @@
 module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
     , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
-    , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
+    , withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
+    , RefMark, withRefLine, withRefBand
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
     , area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
     , histogram, density, pie, donut, radar, funnel, rose, radialBars
@@ -29,7 +30,8 @@ at the call site.
 
 @docs Config, defaults, dark, darken, sized, colored, palette
 @docs withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
-@docs withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
+@docs withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
+@docs RefMark, withRefLine, withRefBand
 
 
 # Charts
@@ -95,6 +97,8 @@ type alias Config =
     , showTips : Bool
     , refs : List RefMark
     , format : Float -> String
+    , yDomain : Maybe ( Float, Float )
+    , yTicks : Int
     , title : String
     , xTitle : String
     , yTitle : String
@@ -129,6 +133,8 @@ defaults =
     , showTips = True
     , refs = []
     , format = Scale.num
+    , yDomain = Nothing
+    , yTicks = 5
     , title = ""
     , xTitle = ""
     , yTitle = ""
@@ -241,6 +247,25 @@ withFormat f c =
     { c | format = f }
 
 
+{-| Pin the Y axis to a fixed `(lo, hi)` domain instead of fitting it to the data — handy for a
+consistent scale across small multiples. -}
+withYDomain : Float -> Float -> Config -> Config
+withYDomain lo hi c =
+    { c | yDomain = Just ( lo, hi ) }
+
+
+{-| Set how many Y-axis tick intervals to draw (default 5). -}
+withYTicks : Int -> Config -> Config
+withYTicks n c =
+    { c | yTicks = Basics.max 1 n }
+
+
+{-| Set the four plot margins `top right bottom left` (room for axes, labels and titles). -}
+withMargins : Float -> Float -> Float -> Float -> Config -> Config
+withMargins t r b l c =
+    { c | top = t, right = r, bottom = b, left = l }
+
+
 {-| Add a horizontal reference line at `value` (e.g. a target or threshold), labelled at the right. -}
 withRefLine : Float -> String -> Config -> Config
 withRefLine value label c =
@@ -279,7 +304,12 @@ yScaleFor : Config -> List Float -> Scale
 yScaleFor c values =
     let
         ( lo, hi ) =
-            Scale.niceBoundsRounded 5 (Scale.niceBounds values)
+            case c.yDomain of
+                Just d ->
+                    d
+
+                Nothing ->
+                    Scale.niceBoundsRounded c.yTicks (Scale.niceBounds values)
     in
     Scale.linear ( lo, hi ) ( c.top + plotH c, c.top )
 
@@ -296,13 +326,18 @@ yScaleRaw c values =
             List.maximum values |> Maybe.withDefault 1
 
         ( a, b ) =
-            Scale.niceBoundsRounded 5
-                (if lo == hi then
-                    ( lo - 1, hi + 1 )
+            case c.yDomain of
+                Just d ->
+                    d
 
-                 else
-                    ( lo, hi )
-                )
+                Nothing ->
+                    Scale.niceBoundsRounded c.yTicks
+                        (if lo == hi then
+                            ( lo - 1, hi + 1 )
+
+                         else
+                            ( lo, hi )
+                        )
     in
     Scale.linear ( a, b ) ( c.top + plotH c, c.top )
 
@@ -2173,8 +2208,16 @@ frame c yS =
                 []
             )
                 ++ [ tickLabel c (left - 5) (y + 3) (c.format v) ]
+
+        tickVals =
+            case c.yDomain of
+                Just ( lo, hi ) ->
+                    Scale.ticks c.yTicks ( lo, hi )
+
+                Nothing ->
+                    Scale.niceTicks c.yTicks ( yS.d0, yS.d1 )
     in
-    List.concatMap gridFor (Scale.niceTicks 5 ( yS.d0, yS.d1 ))
+    List.concatMap gridFor tickVals
         ++ refMarks c yS
         ++ [ axisLine c left c.top left (c.top + plotH c) ]
         ++ zeroLine

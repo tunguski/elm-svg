@@ -245,6 +245,7 @@ view size onSize =
             , card "Dumbbell" "Chart.dumbbell cfg ranges" "A low–high range per category, as two connected dots." (Chart.dumbbell cfg ranges)
             , card "Population pyramid" "Chart.pyramid cfg \"Male\" \"Female\" ages" "Back-to-back bars comparing two groups across categories." (Chart.pyramid cfg "Male" "Female" ages)
             , card "Formatted axis" "Chart.withFormat (Format.prefixed \"$\" …)" "Number formatting on ticks and value labels — money, percent, compact k/M." (Chart.bars (Chart.withFormat (Format.prefixed "$" (Format.decimals 0)) (Chart.withValues True cfg)) sales)
+            , card "Pinned axis" "Chart.line (Chart.withYDomain -10 15 cfg) temps" "A fixed Y domain and tick count, instead of fitting to the data." (Chart.line (Chart.withYTicks 5 (Chart.withYDomain -10 15 cfg)) temps)
             , card "Titled & dark" "Chart.bars (Chart.withTitle \"Sales\" …) sales" "Chart and axis titles, on the dark theme — Chart.darken keeps the slider size." (Chart.bars (Chart.withTitle "Sales" (Chart.withAxisTitles "month" "" (Chart.darken cfg))) sales)
             ]
         ]
