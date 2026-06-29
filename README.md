@@ -18,16 +18,21 @@ import Chart
 Chart.bars Chart.defaults [ ( "Jan", 120 ), ( "Feb", 98 ), ( "Mar", 145 ) ]
 Chart.line Chart.defaults temps           -- (label, value) with a zero baseline
 Chart.area Chart.defaults sales           -- a line, filled to the baseline
-Chart.pie Chart.defaults share            -- slices summing to the whole
-Chart.donut (Chart.withInner 0.6 Chart.defaults) share
-
 Chart.hbars Chart.defaults ranking      -- horizontal bars (long labels / rankings)
 Chart.lollipop Chart.defaults sales     -- stems topped with dots (a lighter bar)
 Chart.histogram Chart.defaults numbers  -- bins a raw List Float into a distribution
 Chart.boxplot Chart.defaults samples    -- List ( String, List Float ) — quartiles + whiskers
 Chart.waterfall Chart.defaults steps    -- (label, delta) bridge bars to a running total
 Chart.gauge Chart.defaults 0 100 72     -- a single KPI value as a dial
+Chart.bullet Chart.defaults kpi         -- { value, target, max, bands } KPI with a target tick
 Chart.sparkline (Chart.sized 200 48) ys -- a tiny, axis-less inline line
+
+-- proportion / part-to-whole
+Chart.pie Chart.defaults share
+Chart.donut (Chart.withInner 0.6 Chart.defaults) share
+Chart.rose Chart.defaults winds           -- polar area (Nightingale rose): radius by value
+Chart.funnel Chart.defaults stages        -- narrowing conversion stages
+Chart.treemap Chart.defaults parts        -- nested rectangles, area by value
 
 -- point / multi-series charts
 Chart.scatter Chart.defaults points       -- raw (x, y); add Chart.withTrend True for a fit line
@@ -37,17 +42,22 @@ Chart.multiLine Chart.defaults serieses   -- List ( String, List (Float, Float) 
 Chart.stackedArea Chart.defaults serieses
 Chart.radar Chart.defaults axes serieses  -- spider chart over shared axes
 Chart.slope Chart.defaults "2019" "2024" ranks  -- (label, before, after) two-period change
+Chart.dumbbell Chart.defaults ranges      -- (label, low, high) range per category
 
 -- segmented bars: List ( String, List ( String, Float ) ) — (category, [(series, value)])
 Chart.stackedBars Chart.defaults revenue
 Chart.groupedBars Chart.defaults revenue
 Chart.percentBars Chart.defaults revenue  -- each category normalised to 100%
+Chart.pareto Chart.defaults defects       -- sorted bars + cumulative % line (right axis)
 
 -- financial: List ( String, open, high, low, close )
 Chart.candlestick Chart.defaults ohlc
 
 -- a grid: column labels, row labels, rows of values
 Chart.heatmap Chart.defaults cols rows grid
+
+-- a schedule: List ( String, start, end )
+Chart.gantt Chart.defaults schedule
 ```
 
 Each function returns an `Svg msg` you drop straight into a page. Numeric axes draw **1·2·5
@@ -90,13 +100,16 @@ Chart.sized 460 260
   summary stats behind box plots and trend lines. Pure and tested.
 - **`Format`** — `decimals` / `percent` / `compact` / `prefixed` / `suffixed`: ready-made
   `Float -> String` formatters for `Chart.withFormat`. Pure and tested.
-- **`Chart`** — `bars`, `hbars`, `lollipop`, `line`, `area`, `scatter`, `scatterErr`, `bubble`,
-  `multiLine`, `slope`, `stackedArea`, `stackedBars`, `groupedBars`, `percentBars`, `histogram`,
-  `pie`, `donut`, `radar`, `boxplot`, `candlestick`, `heatmap`, `sparkline`, `waterfall`, `gauge`
-  over plain Elm data; the `Config` theme/annotation constructors (`sized`, `darken`, `withColor`,
-  `withGrid`, `withValues`, `withTitle`, `withAxisTitles`, `withInner`, `withCurve`, `withStep`,
-  `withTrend`, `withFormat`, `withTips`, `withRefLine`, `withRefBand`); and the building blocks
-  (`frame`, `xAxis`, `legend`, `polylineOf`, `dotsOf`) for bespoke charts.
+- **`Layout`** — `treemap`: tiles a box into value-proportional rectangles by recursive binary
+  slicing. Pure and tested.
+- **`Chart`** — ~30 chart types over plain Elm data: `bars`, `hbars`, `lollipop`, `line`, `area`,
+  `scatter`, `scatterErr`, `bubble`, `multiLine`, `slope`, `dumbbell`, `stackedArea`, `stackedBars`,
+  `groupedBars`, `percentBars`, `pareto`, `histogram`, `pie`, `donut`, `radar`, `funnel`, `rose`,
+  `boxplot`, `candlestick`, `heatmap`, `sparkline`, `waterfall`, `gauge`, `bullet`, `treemap`,
+  `gantt`; the `Config` theme/annotation constructors (`sized`, `darken`, `withColor`, `withGrid`,
+  `withValues`, `withTitle`, `withAxisTitles`, `withInner`, `withCurve`, `withStep`, `withTrend`,
+  `withFormat`, `withTips`, `withRefLine`, `withRefBand`); and the building blocks (`frame`, `xAxis`,
+  `legend`, `polylineOf`, `dotsOf`) for bespoke charts.
 
 ## Gotchas it bakes in
 
@@ -121,7 +134,7 @@ sidestepping the unbound `<path>` element rather than relying on arc path comman
 ## Use it in another project
 
 Each elm-lang project is its own repo, so reuse is by **vendoring**: copy `src/Chart.elm` and the
-pure modules it uses (`Scale`, `Arc`, `Curve`, `Stat`, `Format`) into your project's source path and
+pure modules it uses (`Scale`, `Arc`, `Curve`, `Stat`, `Format`, `Layout`) into your project's source path and
 import `Chart`. (This is how `elm-notebook` draws its cell charts.)
 
 ## Develop
