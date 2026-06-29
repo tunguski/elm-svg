@@ -2,7 +2,7 @@ module Chart exposing
     ( Config, defaults, dark, darken, sized, colored, palette
     , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
-    , bars, hbars, line, scatter, multiLine, bubble
+    , bars, hbars, lollipop, line, scatter, multiLine, bubble
     , area, stackedArea, stackedBars, groupedBars
     , histogram, pie, donut, radar
     , boxplot, candlestick, heatmap, sparkline, waterfall, gauge
@@ -34,7 +34,7 @@ at the call site.
 
 # Charts
 
-@docs bars, hbars, line, scatter, multiLine, bubble
+@docs bars, hbars, lollipop, line, scatter, multiLine, bubble
 @docs area, stackedArea, stackedBars, groupedBars
 @docs histogram, pie, donut, radar
 @docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge
@@ -1330,6 +1330,41 @@ gauge c lo hi value =
         , valueLabel c (cx - (outerR + innerR) / 2) (cy + 12) (c.format lo)
         , valueLabel c (cx + (outerR + innerR) / 2) (cy + 12) (c.format hi)
         ]
+
+
+{-| A lollipop chart of `(label, value)` pairs — a thin stem topped with a dot. A lighter-weight
+alternative to [`bars`](#bars) when the bar area would be more ink than the data needs.
+-}
+lollipop : Config -> List ( String, Float ) -> Svg msg
+lollipop c data =
+    let
+        yS =
+            yScaleFor c (List.map Tuple.second data)
+
+        count =
+            List.length data
+
+        slot =
+            plotW c / toFloat (Basics.max 1 count)
+
+        zeroY =
+            Scale.convert yS 0
+
+        stem i ( lbl, v ) =
+            let
+                cx =
+                    c.left + slot * (toFloat i + 0.5)
+
+                y =
+                    Scale.convert yS v
+            in
+            Svg.g []
+                [ Svg.line [ SA.x1 (Scale.num cx), SA.y1 (Scale.num zeroY), SA.x2 (Scale.num cx), SA.y2 (Scale.num y), SA.stroke c.color, SA.strokeWidth "2" ] []
+                , dot c c.color (c.dotR * 1.9) ( cx, y ) (lbl ++ ": " ++ c.format v)
+                , xLabel c count cx lbl
+                ]
+    in
+    root c (frame c yS ++ List.indexedMap stem data)
 
 
 
