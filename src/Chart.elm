@@ -3,7 +3,7 @@ module Chart exposing
     , withColor, withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withStep, withTrend, withFormat, RefMark, withRefLine, withRefBand
     , bars, hbars, lollipop, line, scatter, multiLine, bubble
-    , area, stackedArea, stackedBars, groupedBars
+    , area, stackedArea, stackedBars, groupedBars, percentBars
     , histogram, pie, donut, radar
     , boxplot, candlestick, heatmap, sparkline, waterfall, gauge
     , frame, xAxis, polylineOf, dotsOf, legend
@@ -35,7 +35,7 @@ at the call site.
 # Charts
 
 @docs bars, hbars, lollipop, line, scatter, multiLine, bubble
-@docs area, stackedArea, stackedBars, groupedBars
+@docs area, stackedArea, stackedBars, groupedBars, percentBars
 @docs histogram, pie, donut, radar
 @docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge
 
@@ -1365,6 +1365,74 @@ lollipop c data =
                 ]
     in
     root c (frame c yS ++ List.indexedMap stem data)
+
+
+{-| Like [`stackedBars`](#stackedBars) but each category is normalised to 100%, so the bars compare
+the *composition* of each category rather than its total. Same `(label, [(series, value)])` data.
+-}
+percentBars : Config -> List ( String, List ( String, Float ) ) -> Svg msg
+percentBars c data =
+    let
+        normalize ( lbl, segs ) =
+            let
+                total =
+                    List.sum (List.map Tuple.second segs)
+
+                t =
+                    if total == 0 then
+                        1
+
+                    else
+                        total
+            in
+            ( lbl, List.map (\( n, v ) -> ( n, v / t * 100 )) segs )
+
+        normed =
+            List.map normalize data
+
+        cPct =
+            { c | format = \v -> Scale.num v ++ "%" }
+
+        yS =
+            Scale.linear ( 0, 100 ) ( c.top + plotH c, c.top )
+
+        count =
+            List.length data
+
+        slot =
+            plotW c / toFloat (Basics.max 1 count)
+
+        barW =
+            slot * 0.64
+
+        seriesNames =
+            case data of
+                ( _, segs ) :: _ ->
+                    List.map Tuple.first segs
+
+                [] ->
+                    []
+
+        seg cx ( j, ( name, v ) ) ( cum, acc ) =
+            ( cum + v
+            , acc
+                ++ [ Svg.rect
+                        [ SA.x (Scale.num (cx - barW / 2)), SA.y (Scale.num (Scale.convert yS (cum + v))), SA.width (Scale.num barW), SA.height (Scale.num (Basics.max 0.5 (abs (Scale.convert yS cum - Scale.convert yS (cum + v))))), SA.fill (colorAt j) ]
+                        (tip c (name ++ ": " ++ Scale.num v ++ "%"))
+                   ]
+            )
+
+        bar i ( lbl, segs ) =
+            let
+                cx =
+                    c.left + slot * (toFloat i + 0.5)
+
+                ( _, rects ) =
+                    List.foldl (seg cx) ( 0, [] ) (List.indexedMap Tuple.pair segs)
+            in
+            Svg.g [] (rects ++ [ xLabel c count cx lbl ])
+    in
+    root c (frame cPct yS ++ List.indexedMap bar normed ++ [ legend c seriesNames ])
 
 
 
