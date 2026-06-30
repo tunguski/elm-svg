@@ -4,7 +4,7 @@
 #
 # The elm.sh wrapper chdirs to the elm-lang repo root before running, so every path passed to
 # `make` must be absolute (computed here after we cd into the script's own dir). Like the other
-# elm-lang example apps we compile with --no-check.
+# elm-lang example apps, it type-checks cleanly (no --no-check).
 #
 #   ELM=../../elm.sh ./build.sh
 #
@@ -17,7 +17,7 @@ P="$(pwd)"
 
 mkdir -p "$OUT"
 echo "Compiling elm-svg with: $ELM"
-$ELM make "$P/src/Main.elm" --project="$P/elm.json" -o "$P/$OUT/elm-svg.html" --no-check
+$ELM make "$P/src/Main.elm" --project="$P/elm.json" -o "$P/$OUT/elm-svg.html"
 
 # The compiler owns the output's <head>; add a viewport meta and inline src/svg.css as a <style>
 # so the page stays a single self-contained file (idempotent on re-runs).
