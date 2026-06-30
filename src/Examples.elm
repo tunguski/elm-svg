@@ -186,6 +186,22 @@ league =
     ]
 
 
+activity : List Float
+activity =
+    List.map (\i -> toFloat (modBy 5 (i * 7 + 3)) + toFloat (modBy 3 i)) (List.range 0 48)
+
+
+flows : List ( String, String, Float )
+flows =
+    [ ( "Search", "Signup", 50 )
+    , ( "Search", "Bounce", 30 )
+    , ( "Social", "Signup", 25 )
+    , ( "Social", "Bounce", 35 )
+    , ( "Direct", "Signup", 40 )
+    , ( "Direct", "Bounce", 15 )
+    ]
+
+
 
 -- THE EXAMPLES ---------------------------------------------------------------
 
@@ -247,6 +263,12 @@ examples size =
     , ex "Stepped line" "A stair step — for values that hold then jump." [ tempsD ] """Chart.line (Chart.withStep True cfg) temps""" (Chart.line (Chart.withStep True cfg) temps)
     , ex "Mark styling" "Tune typography, line weight and marker size." [ tempsD ] """Chart.line (Chart.withStroke 3.5 (Chart.withDots 5 (Chart.withFont "Georgia, serif" 11 cfg))) temps""" (Chart.line (Chart.withStroke 3.5 (Chart.withDots 5 (Chart.withFont "Georgia, serif" 11 cfg))) temps)
     , ex "Box plots" "Quartiles, median and whiskers per sample, from the tested Stat module." [ def "samples" (listOf slf samples) ] """Chart.boxplot cfg samples""" (Chart.boxplot cfg samples)
+    , ex "Violin plot" "A mirrored kernel-density curve per sample — the smooth cousin of a box plot." [ def "samples" (listOf slf samples) ] """Chart.violin cfg samples""" (Chart.violin cfg samples)
+    , ex "Waffle chart" "100 cells apportioned by share (largest-remainder), one colour per category." [ shareD ] """Chart.waffle cfg share""" (Chart.waffle cfg share)
+    , ex "Calendar heatmap" "Daily values laid out as weeks × weekdays, shaded by value." [ activitySrc ] """Chart.calendar cfg 2 activity""" (Chart.calendar cfg 2 activity)
+    , ex "Mosaic / Marimekko" "Stacked bars with variable column widths — width by category total, height 100%." [ revenueD ] """Chart.mosaic cfg revenue""" (Chart.mosaic cfg revenue)
+    , ex "Sankey diagram" "Two-level flows from sources to targets, banded by volume." [ def "flows" (listOf ssf2 flows) ] """Chart.sankey cfg flows""" (Chart.sankey cfg flows)
+    , ex "Point annotation" "Ring-and-label callouts at data points, set with Chart.withMarker." [ cloudD ] """Chart.scatter (Chart.withMarker 6 6.1 "peak" cfg) cloud""" (Chart.scatter (Chart.withMarker 6 6.1 "peak" cfg) cloud)
     , ex "Candlestick" "Open/high/low/close — up days green, down days red." [ def "ohlc" (listOf ohlcT ohlc) ] """Chart.candlestick cfg ohlc""" (Chart.candlestick cfg ohlc)
     , ex "Heatmap" "A grid shaded along a colour ramp; hover for values." [ heatColsD, heatRowsD, heatValsD ] """Chart.heatmap cfg heatCols heatRows heatVals""" (Chart.heatmap cfg heatCols heatRows heatVals)
     , ex "Custom colour scale" "Set the sequential ramp for heatmaps, bubbles and bullets." [ heatColsD, heatRowsD, heatValsD ] """Chart.heatmap (Chart.withColorScale "#fff5eb" "#d94801" cfg) heatCols heatRows heatVals""" (Chart.heatmap (Chart.withColorScale "#fff5eb" "#d94801" cfg) heatCols heatRows heatVals)
@@ -387,6 +409,17 @@ slf ( a, bs ) =
 slsf : ( String, List ( String, Float ) ) -> String
 slsf ( a, bs ) =
     "( " ++ qt a ++ ", " ++ listOf sf bs ++ " )"
+
+
+ssf2 : ( String, String, Float ) -> String
+ssf2 ( a, b, v ) =
+    "( " ++ qt a ++ ", " ++ qt b ++ ", " ++ nm v ++ " )"
+
+
+activitySrc : String
+activitySrc =
+    """activity =
+    List.map (\\i -> toFloat (modBy 5 (i * 7 + 3)) + toFloat (modBy 3 i)) (List.range 0 48)"""
 
 
 heatColsD : String

@@ -154,8 +154,8 @@ model, toggle it on a legend click, and re-render — the chart stays a pure fun
 
 - **`Scale`** — linear **and log** scales (`linear` / `log` / `convert` / `invert`), bounds and
   ticks (`niceBounds`, `ticks`, and the rounded `niceNum` / `niceTicks` / `niceBoundsRounded`),
-  histogram `binCounts`, colour `interpolateColor`, and coordinate formatting (`num` / `point` /
-  `pointsString`). No SVG, so it is exhaustively tested.
+  histogram `binCounts`, colour `interpolateColor`, largest-remainder `allocate`, and coordinate
+  formatting (`num` / `point` / `pointsString`). No SVG, so it is exhaustively tested.
 - **`Arc`** — the pie/donut maths: `slices` (values → angular slices) and `wedgePoints` /
   `ringPoints` (slices → polygon point-lists). Also pure and tested.
 - **`Curve`** — `smooth` / `catmullRom`: a point list → a smooth spline sampled as points (so a
@@ -172,11 +172,13 @@ model, toggle it on a legend click, and re-render — the chart stays a pure fun
   `Draw.svg` to render. Not charts — freeform drawing.
 - **`Animate`** — declarative SMIL animation (`loop` / `loopValues` / `spin` / `onEvent` /
   `transition`) attached to a `Draw` shape with `withChild`.
-- **`Chart`** — ~37 chart types over plain Elm data: `bars`, `hbars`, `lollipop`, `line`, `area`,
+- **`Chart`** — ~43 chart types over plain Elm data: `bars`, `hbars`, `lollipop`, `line`, `area`,
   `scatter`, `scatterErr`, `bubble`, `multiLine`, `slope`, `dumbbell`, `pyramid`, `bump`,
-  `stackedArea`, `streamgraph`, `stackedBars`, `groupedBars`, `percentBars`, `pareto`, `histogram`,
-  `density`, `pie`, `donut`, `radar`, `funnel`, `rose`, `radialBars`, `boxplot`, `candlestick`,
-  `heatmap`, `sparkline`, `waterfall`, `gauge`, `bullet`, `treemap`, `gantt`; the `Config`
+  `stackedArea`, `streamgraph`, `stackedBars`, `groupedBars`, `percentBars`, `pareto`, `mosaic`,
+  `histogram`, `density`, `violin`, `pie`, `donut`, `radar`, `funnel`, `rose`, `radialBars`,
+  `boxplot`, `candlestick`, `heatmap`, `calendar`, `waffle`, `sankey`, `sparkline`, `waterfall`,
+  `gauge`, `bullet`, `treemap`, `gantt`; point annotations (`withMarker`) and accessible titles
+  (`role="img"`/`<title>` from `withTitle`); the `Config`
   constructors for **style** (`sized`, `darken`, `withColor`, `withPalette`, `withGradient`,
   `withColorScale`, `withPlotBackground`, `withBorder`, `withFont`, `withDots`, `withStroke`),
   **annotation** (`withTitle`, `withAxisTitles`, `withValues`, `withCurve`, `withStep`, `withTrend`,

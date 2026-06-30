@@ -25,6 +25,7 @@ suite =
         , tickTests
         , logTests
         , niceTests
+        , allocateTests
         , arcTests
         , binTests
         , colorTests
@@ -134,6 +135,20 @@ niceTests =
             \_ -> Expect.equal (roundPair (Scale.niceBoundsRounded 5 ( 3, 97 ))) ( 0, 100 )
         , test "spans negatives outward too" <|
             \_ -> Expect.equal (roundPair (Scale.niceBoundsRounded 5 ( -12, 8 ))) ( -15, 10 )
+        ]
+
+
+allocateTests : Test
+allocateTests =
+    describe "Scale.allocate"
+        [ test "splits exactly when shares are whole" <|
+            \_ -> Expect.equal (Scale.allocate 100 [ 1, 1, 2 ]) [ 25, 25, 50 ]
+        , test "always sums to n" <|
+            \_ -> Expect.equal (List.sum (Scale.allocate 10 [ 1, 1, 1 ])) 10
+        , test "gives leftover units to the largest remainders" <|
+            \_ -> Expect.equal (Scale.allocate 10 [ 1, 1, 1 ]) [ 4, 3, 3 ]
+        , test "an all-zero input allocates nothing" <|
+            \_ -> Expect.equal (Scale.allocate 10 [ 0, 0 ]) [ 0, 0 ]
         ]
 
 

@@ -1,7 +1,7 @@
 module Scale exposing
     ( Scale, linear, log, convert, invert
     , niceBounds, ticks, niceNum, niceTicks, niceBoundsRounded
-    , binCounts, interpolateColor
+    , binCounts, interpolateColor, allocate
     , num, point, pointsString
     )
 
@@ -16,7 +16,7 @@ a 1·2·5 series and snaps the bounds outward, which reads far better on a real 
 
 @docs Scale, linear, log, convert, invert
 @docs niceBounds, ticks, niceNum, niceTicks, niceBoundsRounded
-@docs binCounts, interpolateColor
+@docs binCounts, interpolateColor, allocate
 @docs num, point, pointsString
 
 -}
@@ -328,6 +328,48 @@ toHex2 n =
             String.slice d (d + 1) hexDigits
     in
     nib (c // 16) ++ nib (modBy 16 c)
+
+
+{-| Apportion `n` whole units among `weights` in proportion, using the **largest-remainder** method
+so the parts sum to *exactly* `n`. Each gets `floor(share)`, then the leftover units go one each to
+the largest fractional remainders. The maths behind a waffle chart's 100 cells.
+-}
+allocate : Int -> List Float -> List Int
+allocate n weights =
+    let
+        total =
+            List.sum (List.map (Basics.max 0) weights)
+    in
+    if total <= 0 || n <= 0 then
+        List.map (\_ -> 0) weights
+
+    else
+        let
+            shares =
+                List.map (\w -> Basics.max 0 w / total * toFloat n) weights
+
+            floors =
+                List.map floor shares
+
+            leftover =
+                n - List.sum floors
+
+            -- indices ranked by descending fractional remainder
+            ranked =
+                List.indexedMap (\i s -> ( i, s - toFloat (floor s) )) shares
+                    |> List.sortBy (\( _, frac ) -> -frac)
+                    |> List.take leftover
+                    |> List.map Tuple.first
+        in
+        List.indexedMap
+            (\i base ->
+                if List.member i ranked then
+                    base + 1
+
+                else
+                    base
+            )
+            floors
 
 
 {-| Format a number compactly: integers without a trailing `.0`, others to a few decimals. -}

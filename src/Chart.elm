@@ -4,12 +4,12 @@ module Chart exposing
     , withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
     , withFont, withDots, withStroke
     , withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
-    , RefMark, withRefLine, withRefBand, LegendPos(..), withLegend, withHidden, withLegendRow, withLegendTitle
+    , RefMark, withRefLine, withRefBand, withMarker, LegendPos(..), withLegend, withHidden, withLegendRow, withLegendTitle
     , bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
-    , area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
-    , histogram, density, pie, donut, radar, funnel, rose, radialBars
-    , boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
-    , frame, xAxis, polylineOf, dotsOf, legend
+    , area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto, mosaic
+    , histogram, density, violin, pie, donut, radar, funnel, rose, radialBars
+    , boxplot, candlestick, heatmap, calendar, waffle, sankey, sparkline, waterfall, gauge, treemap, gantt, bullet
+    , frame, xAxis, annotations, polylineOf, dotsOf, legend
     )
 
 {-| Small, dependency-free SVG charts.
@@ -17,9 +17,8 @@ module Chart exposing
 Each chart is one call — `Chart.bars Chart.defaults data` — returning an `Svg` you drop into a
 page. Data is plain Elm: a category chart is a `List ( String, Float )` (label, value); a scatter
 or a line series is a `List ( Float, Float )` (x, y); a multi-series chart is a list of named
-series. Colours come from the [`Config`](#Config), applied inline (the JS backend does not bind
-`Svg.Attributes.class`, so SVG nodes are styled by attribute, not CSS). The number-crunching lives
-in [`Scale`](Scale) and [`Arc`](Arc).
+series. Colours come from the [`Config`](#Config), applied inline so a chart is self-styled (no
+external CSS needed). The number-crunching lives in [`Scale`](Scale) and [`Arc`](Arc).
 
 The `Config` carries a small **theme** — accent colour, axis/grid/label colours, background, font,
 and toggles for gridlines, value labels and titles. Build one with the chainable constructors here
@@ -34,26 +33,29 @@ and toggles for gridlines, value labels and titles. Build one with the chainable
 @docs withGrid, withValues, withTitle, withAxisTitles, withInner, withCurve, withTips
 @docs withFont, withDots, withStroke
 @docs withStep, withTrend, withFormat, withYDomain, withYTicks, withMargins
-@docs RefMark, withRefLine, withRefBand, LegendPos, withLegend, withHidden, withLegendRow, withLegendTitle
+@docs RefMark, withRefLine, withRefBand, withMarker, LegendPos, withLegend, withHidden, withLegendRow, withLegendTitle
 
 
 # Charts
 
 @docs bars, hbars, lollipop, line, scatter, scatterErr, multiLine, bubble, slope, dumbbell, pyramid, bump
-@docs area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto
-@docs histogram, density, pie, donut, radar, funnel, rose, radialBars
-@docs boxplot, candlestick, heatmap, sparkline, waterfall, gauge, treemap, gantt, bullet
+@docs area, stackedArea, streamgraph, stackedBars, groupedBars, percentBars, pareto, mosaic
+@docs histogram, density, violin, pie, donut, radar, funnel, rose, radialBars
+@docs boxplot, candlestick, heatmap, calendar, waffle, sankey, sparkline, waterfall, gauge, treemap, gantt, bullet
 
 
 # Building blocks
 
-@docs frame, xAxis, polylineOf, dotsOf, legend
+@docs frame, xAxis, annotations, polylineOf, dotsOf, legend
 
 -}
 
 import Arc
 import Curve
+import Dict exposing (Dict)
+import Html.Attributes as HA
 import Layout
+import Path
 import Scale exposing (Scale)
 import Stat
 import Svg exposing (Svg)
@@ -114,6 +116,7 @@ type alias Config =
     , trend : Bool
     , showTips : Bool
     , refs : List RefMark
+    , markers : List ( Float, Float, String )
     , format : Float -> String
     , yDomain : Maybe ( Float, Float )
     , yTicks : Int
@@ -159,6 +162,7 @@ defaults =
     , trend = False
     , showTips = True
     , refs = []
+    , markers = []
     , format = Scale.num
     , yDomain = Nothing
     , yTicks = 5
@@ -396,6 +400,14 @@ withRefBand lo hi label c =
     { c | refs = c.refs ++ [ { lo = lo, hi = hi, color = "#e8590c", label = label, band = True } ] }
 
 
+{-| Annotate a data point `(x, y)` with a small ring and a `label`. Drawn on the point charts
+([`line`](#line), [`area`](#area), [`scatter`](#scatter), [`bubble`](#bubble)) where the X is a real
+coordinate. -}
+withMarker : Float -> Float -> String -> Config -> Config
+withMarker x y label c =
+    { c | markers = c.markers ++ [ ( x, y, label ) ] }
+
+
 {-| A small qualitative colour palette for multi-series charts. -}
 palette : List String
 palette =
@@ -486,14 +498,42 @@ stepped pts =
 
 root : Config -> List (Svg msg) -> Svg msg
 root c children =
-    -- Colours are set inline from the Config so a chart is configured through this API rather than
-    -- external CSS (the backend now binds Svg.Attributes.class, but inline keeps charts self-styled).
+    -- Colours are set inline from the Config so a chart is self-styled (no external CSS needed).
+    -- Accessibility: a non-empty title becomes the SVG's accessible name (role="img" + <title>).
     Svg.svg
-        [ SA.viewBox ("0 0 " ++ Scale.num c.width ++ " " ++ Scale.num c.height)
-        , SA.width (Scale.num c.width)
-        , SA.height (Scale.num c.height)
-        ]
-        (background c ++ gradientDefs c ++ children)
+        ([ SA.viewBox ("0 0 " ++ Scale.num c.width ++ " " ++ Scale.num c.height)
+         , SA.width (Scale.num c.width)
+         , SA.height (Scale.num c.height)
+         ]
+            ++ (if c.title == "" then
+                    []
+
+                else
+                    [ HA.attribute "role" "img", HA.attribute "aria-label" c.title ]
+               )
+        )
+        (a11y c ++ background c ++ gradientDefs c ++ children)
+
+
+{-| The `<title>`/`<desc>` accessibility nodes for a chart (its title and axis labels), read by
+screen readers. Empty when there is no title. -}
+a11y : Config -> List (Svg msg)
+a11y c =
+    if c.title == "" then
+        []
+
+    else
+        let
+            desc =
+                String.join " " (List.filter (\s -> s /= "") [ c.xTitle, c.yTitle ])
+        in
+        Svg.title [] [ Svg.text c.title ]
+            :: (if desc == "" then
+                    []
+
+                else
+                    [ Svg.desc [] [ Svg.text desc ] ]
+               )
 
 
 {-| A fill value for `colour`: a `url(#…)` gradient reference when the `Config` asks for gradients
@@ -642,7 +682,7 @@ line c data =
                 (\i ( lbl, v ) -> dot c c.color c.dotR ( Scale.convert xS (toFloat i), Scale.convert yS v ) (lbl ++ ": " ++ Scale.num v))
                 data
     in
-    root c (frame c yS ++ (strokeLine c c.color (linePoints c pts) :: tips ++ labels))
+    root c (frame c yS ++ (strokeLine c c.color (linePoints c pts) :: tips ++ labels) ++ annotations c xS yS)
 
 
 {-| An area chart of `(label, value)` pairs: a line with the region down to the baseline filled. -}
@@ -685,6 +725,7 @@ area c data =
                     :: tips
                     ++ labels
                )
+            ++ annotations c xS yS
         )
 
 
@@ -720,7 +761,7 @@ scatter c data =
             else
                 []
     in
-    root c (frame c yS ++ xAxis c xS ++ trendLine ++ dots)
+    root c (frame c yS ++ xAxis c xS ++ trendLine ++ dots ++ annotations c xS yS)
 
 
 {-| Several named `(x, y)` line series, each in a palette colour, with a legend. -}
@@ -1096,7 +1137,7 @@ bubble c data =
                 ]
                 (tip c ("(" ++ Scale.num x ++ ", " ++ Scale.num y ++ ") · " ++ Scale.num s))
     in
-    root c (frame c yS ++ xAxis c xS ++ List.map bubbleOf data)
+    root c (frame c yS ++ xAxis c xS ++ List.map bubbleOf data ++ annotations c xS yS)
 
 
 {-| A histogram of a raw `List Float`: values are split into equal-width bins (about √n of them) and
@@ -2341,6 +2382,336 @@ bullet c spec =
         )
 
 
+{-| A violin plot of `(label, sample)` categories — a mirrored kernel-density curve per sample (the
+smooth cousin of a [`boxplot`](#boxplot)) against a shared value axis, with the median marked. Uses
+the tested [`Stat.kde`](Stat). -}
+violin : Config -> List ( String, List Float ) -> Svg msg
+violin c data =
+    let
+        yS =
+            yScaleRaw c (List.concatMap Tuple.second data)
+
+        count =
+            List.length data
+
+        slot =
+            plotW c / toFloat (Basics.max 1 count)
+
+        halfW =
+            slot * 0.4
+
+        steps =
+            40
+
+        grid =
+            List.map (\i -> yS.d0 + (yS.d1 - yS.d0) * toFloat i / toFloat steps) (List.range 0 steps)
+
+        cat i ( lbl, sample ) =
+            let
+                h =
+                    let
+                        s =
+                            1.06 * Stat.stdDev sample * toFloat (Basics.max 1 (List.length sample)) ^ (-0.2)
+                    in
+                    if s <= 0 then
+                        Basics.max 1.0e-6 ((yS.d1 - yS.d0) * 0.05)
+
+                    else
+                        s
+
+                densities =
+                    List.map (Stat.kde h sample) grid
+
+                maxD =
+                    Basics.max 1.0e-12 (List.maximum densities |> Maybe.withDefault 1)
+
+                cx =
+                    c.left + slot * (toFloat i + 0.5)
+
+                side mul =
+                    List.map2 (\gy d -> ( cx + mul * d / maxD * halfW, Scale.convert yS gy )) grid densities
+
+                medY =
+                    Scale.convert yS (Stat.median sample)
+            in
+            Svg.g []
+                [ Svg.polyline
+                    [ SA.points (Scale.pointsString (side 1 ++ List.reverse (side -1))), SA.fill (fillC c (colorAt c i)), SA.fillOpacity "0.5", SA.stroke (colorAt c i), SA.strokeWidth "1" ]
+                    (tip c (lbl ++ " (median " ++ c.format (Stat.median sample) ++ ")"))
+                , Svg.line [ SA.x1 (Scale.num (cx - halfW / 2)), SA.y1 (Scale.num medY), SA.x2 (Scale.num (cx + halfW / 2)), SA.y2 (Scale.num medY), SA.stroke (colorAt c i), SA.strokeWidth "1.5" ] []
+                , xLabel c count cx lbl
+                ]
+    in
+    root c (frame c yS ++ List.indexedMap cat data)
+
+
+{-| A waffle chart of `(label, value)` shares: a 10×10 grid of squares apportioned by
+[`Scale.allocate`](Scale) (so the cells sum to exactly 100), one colour per category, with a legend. -}
+waffle : Config -> List ( String, Float ) -> Svg msg
+waffle c data =
+    let
+        cellColours =
+            List.concat (List.indexedMap (\i cnt -> List.repeat cnt (colorAt c i)) (Scale.allocate 100 (List.map Tuple.second data)))
+
+        side =
+            Basics.min (plotW c) (plotH c) / 10
+
+        gap =
+            side * 0.14
+
+        cell idx colour =
+            Svg.rect
+                [ SA.x (Scale.num (c.left + toFloat (modBy 10 idx) * side))
+                , SA.y (Scale.num (c.top + toFloat (idx // 10) * side))
+                , SA.width (Scale.num (side - gap))
+                , SA.height (Scale.num (side - gap))
+                , SA.fill (fillC c colour)
+                , SA.rx "2"
+                ]
+                []
+    in
+    root c (List.indexedMap cell cellColours ++ [ legend c (List.map Tuple.first data) ])
+
+
+{-| A calendar heatmap: daily `values` laid out in columns of weeks, rows of weekdays, each cell
+shaded along the colour scale. `startWeekday` (0 = Sunday … 6 = Saturday) places the first day. -}
+calendar : Config -> Int -> List Float -> Svg msg
+calendar c startWeekday values =
+    let
+        offset =
+            modBy 7 (Basics.max 0 startWeekday)
+
+        weeks =
+            (List.length values + offset + 6) // 7
+
+        lo =
+            List.minimum values |> Maybe.withDefault 0
+
+        hi =
+            List.maximum values |> Maybe.withDefault 1
+
+        span =
+            if hi == lo then
+                1
+
+            else
+                hi - lo
+
+        side =
+            Basics.min (plotW c / toFloat (Basics.max 1 weeks)) (plotH c / 7)
+
+        gap =
+            side * 0.14
+
+        day k v =
+            let
+                p =
+                    k + offset
+            in
+            Svg.rect
+                [ SA.x (Scale.num (c.left + toFloat (p // 7) * side))
+                , SA.y (Scale.num (c.top + toFloat (modBy 7 p) * side))
+                , SA.width (Scale.num (side - gap))
+                , SA.height (Scale.num (side - gap))
+                , SA.fill (ramp c c.grid c.color ((v - lo) / span))
+                , SA.rx "2"
+                ]
+                (tip c ("day " ++ String.fromInt (k + 1) ++ ": " ++ c.format v))
+    in
+    root c (List.indexedMap day values)
+
+
+{-| A Marimekko (mosaic) chart: stacked bars whose **column widths** track each category's total, so
+both the within-category split (height) and the category size (width) are encoded. Same
+`(category, [(series, value)])` data as [`stackedBars`](#stackedBars). -}
+mosaic : Config -> List ( String, List ( String, Float ) ) -> Svg msg
+mosaic c data =
+    let
+        colTotal segs =
+            List.sum (List.map Tuple.second segs)
+
+        grand =
+            Basics.max 1.0e-9 (List.sum (List.map (\( _, segs ) -> colTotal segs) data))
+
+        seriesNames =
+            case data of
+                ( _, segs ) :: _ ->
+                    List.map Tuple.first segs
+
+                [] ->
+                    []
+
+        seg lbl x0 w t ( j, ( name, v ) ) ( cum, rs ) =
+            let
+                y0 =
+                    c.top + cum / t * plotH c
+
+                y1 =
+                    c.top + (cum + v) / t * plotH c
+            in
+            ( cum + v
+            , rs
+                ++ [ Svg.rect
+                        [ SA.x (Scale.num x0), SA.y (Scale.num y0), SA.width (Scale.num (Basics.max 0.5 (w - 1))), SA.height (Scale.num (Basics.max 0.5 (y1 - y0))), SA.fill (fillC c (colorAt c j)) ]
+                        (tip c (lbl ++ " · " ++ name ++ ": " ++ c.format v))
+                   ]
+            )
+
+        column ( lbl, segs ) ( x0, acc ) =
+            let
+                ct =
+                    colTotal segs
+
+                w =
+                    ct / grand * plotW c
+
+                t =
+                    Basics.max 1.0e-9 ct
+
+                ( _, rects ) =
+                    List.foldl (seg lbl x0 w t) ( 0, [] ) (List.indexedMap Tuple.pair segs)
+            in
+            ( x0 + w, acc ++ rects ++ [ valueLabel c (x0 + w / 2) (c.top + plotH c + 13) (clip lbl) ] )
+
+        ( _, allRects ) =
+            List.foldl column ( c.left, [] ) data
+    in
+    root c (allRects ++ [ legend c seriesNames ])
+
+
+{-| A two-level Sankey diagram of `(from, to, value)` flows: source nodes on the left, target nodes
+on the right, joined by curved bands whose thickness tracks the flow. -}
+sankey : Config -> List ( String, String, Float ) -> Svg msg
+sankey c links =
+    let
+        froms =
+            distinct (List.map (\( f, _, _ ) -> f) links)
+
+        tos =
+            distinct (List.map (\( _, t, _ ) -> t) links)
+
+        total =
+            Basics.max 1.0e-9 (List.sum (List.map (\( _, _, v ) -> v) links))
+
+        nodeW =
+            12
+
+        leftX =
+            c.left
+
+        rightX =
+            c.left + plotW c - nodeW
+
+        midX =
+            (leftX + nodeW + rightX) / 2
+
+        gap =
+            8
+
+        availFor names =
+            plotH c - gap * toFloat (Basics.max 0 (List.length names - 1))
+
+        sumWhere keep nm =
+            List.sum (List.filterMap (\( f, t, v ) -> ifJust (keep ( f, t ) == nm) v) links)
+
+        boxes names keep =
+            let
+                avail =
+                    availFor names
+
+                place nm ( y, acc ) =
+                    let
+                        hgt =
+                            sumWhere keep nm / total * avail
+                    in
+                    ( y + hgt + gap, Dict.insert nm ( y, hgt ) acc )
+            in
+            Tuple.second (List.foldl place ( c.top, Dict.empty ) names)
+
+        fromBox =
+            boxes froms (\( f, _ ) -> f)
+
+        toBox =
+            boxes tos (\( _, t ) -> t)
+
+        fromIdx =
+            Dict.fromList (List.indexedMap (\i nm -> ( nm, i )) froms)
+
+        fromNodes =
+            List.indexedMap (\i nm -> nodeRectAt leftX (colorAt c i) nm fromBox) froms
+
+        toNodes =
+            List.map (\nm -> nodeRectAt rightX c.axis nm toBox) tos
+
+        nodeRectAt x colour nm box =
+            let
+                ( y, hgt ) =
+                    Dict.get nm box |> Maybe.withDefault ( c.top, 0 )
+            in
+            Svg.rect [ SA.x (Scale.num x), SA.y (Scale.num y), SA.width (Scale.num nodeW), SA.height (Scale.num (Basics.max 1 hgt)), SA.fill colour ] (tip c nm)
+
+        labelAt x anchor nm box dx =
+            let
+                ( y, hgt ) =
+                    Dict.get nm box |> Maybe.withDefault ( c.top, 0 )
+            in
+            Svg.text_ [ SA.x (Scale.num (x + dx)), SA.y (Scale.num (y + hgt / 2 + 3)), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor anchor ] [ Svg.text (clip nm) ]
+
+        fAvail =
+            availFor froms
+
+        tAvail =
+            availFor tos
+
+        band ( f, t, v ) ( fOff, tOff, acc ) =
+            let
+                ( fTop, _ ) =
+                    Dict.get f fromBox |> Maybe.withDefault ( c.top, 0 )
+
+                ( tTop, _ ) =
+                    Dict.get t toBox |> Maybe.withDefault ( c.top, 0 )
+
+                fo =
+                    Dict.get f fOff |> Maybe.withDefault 0
+
+                to =
+                    Dict.get t tOff |> Maybe.withDefault 0
+
+                fThick =
+                    v / total * fAvail
+
+                tThick =
+                    v / total * tAvail
+
+                d =
+                    Path.empty
+                        |> Path.moveTo (leftX + nodeW) (fTop + fo)
+                        |> Path.curveTo midX (fTop + fo) midX (tTop + to) rightX (tTop + to)
+                        |> Path.lineTo rightX (tTop + to + tThick)
+                        |> Path.curveTo midX (tTop + to + tThick) midX (fTop + fo + fThick) (leftX + nodeW) (fTop + fo + fThick)
+                        |> Path.close
+                        |> Path.toString
+            in
+            ( Dict.insert f (fo + fThick) fOff
+            , Dict.insert t (to + tThick) tOff
+            , acc
+                ++ [ Svg.path [ SA.d d, SA.fill (colorAt c (Dict.get f fromIdx |> Maybe.withDefault 0)), SA.fillOpacity "0.4" ]
+                        (tip c (f ++ " → " ++ t ++ ": " ++ c.format v))
+                   ]
+            )
+
+        ( _, _, bands ) =
+            List.foldl band ( Dict.empty, Dict.empty, [] ) links
+    in
+    root c
+        (bands
+            ++ fromNodes
+            ++ toNodes
+            ++ List.map (\nm -> labelAt leftX "end" nm fromBox (negate 3)) froms
+            ++ List.map (\nm -> labelAt rightX "start" nm toBox (nodeW + 3)) tos
+        )
+
+
 
 -- BUILDING BLOCKS ------------------------------------------------------------
 
@@ -2499,6 +2870,26 @@ xAxis c xS =
     in
     List.concatMap gridFor (Scale.niceTicks 5 ( xS.d0, xS.d1 ))
         ++ [ axisLine c c.left bottomY (c.left + plotW c) bottomY ]
+
+
+{-| The point annotations set on the `Config` ([`withMarker`](#withMarker)), drawn at their `(x, y)`
+in the given X/Y scales: a ring with a label beside it. -}
+annotations : Config -> Scale -> Scale -> List (Svg msg)
+annotations c xS yS =
+    List.concatMap
+        (\( x, y, label ) ->
+            let
+                px =
+                    Scale.convert xS x
+
+                py =
+                    Scale.convert yS y
+            in
+            [ Svg.circle [ SA.cx (Scale.num px), SA.cy (Scale.num py), SA.r "4", SA.fill "none", SA.stroke c.label, SA.strokeWidth "1.5" ] []
+            , Svg.text_ [ SA.x (Scale.num (px + 7)), SA.y (Scale.num (py - 4)), SA.fill c.label, SA.fontFamily c.font, SA.fontSize (Scale.num c.fontSize), SA.textAnchor "start" ] [ Svg.text label ]
+            ]
+        )
+        c.markers
 
 
 titles : Config -> List (Svg msg)
@@ -2853,6 +3244,29 @@ clip s =
 
     else
         s
+
+
+distinct : List String -> List String
+distinct xs =
+    List.foldl
+        (\x acc ->
+            if List.member x acc then
+                acc
+
+            else
+                acc ++ [ x ]
+        )
+        []
+        xs
+
+
+ifJust : Bool -> a -> Maybe a
+ifJust cond v =
+    if cond then
+        Just v
+
+    else
+        Nothing
 
 
 colorAt : Config -> Int -> String
